@@ -4,6 +4,7 @@ import math
 import unittest
 
 from lessons.lesson_01 import mount_base_board
+from synth.gain import Gain
 from synth.patch import PatchCable
 from synth.pitch_control import PitchControl
 
@@ -60,6 +61,26 @@ class BoardTests(unittest.TestCase):
         board.next_sample()
         oscillator.reset()
         self.assertTrue(math.isclose(board.next_sample(), 0.0, abs_tol=1e-12))
+
+    def test_gain_multiplies_the_audio_signal_before_the_output(self) -> None:
+        """A gain stage scales the oscillator sample before AudioOutput reads it."""
+        board, oscillator, audio_output = mount_base_board()
+        direct_cable = board.cables[0]
+        board.unpatch(direct_cable)
+        gain = Gain(0.50)
+        board.mount(gain)
+        board.patch(oscillator.sine_output, gain.audio_input)
+        board.patch(gain.audio_output, audio_output.audio_input)
+        audio_output.monitor_level.set_value(1.0)
+
+        samples = [board.next_sample() for _ in range(4)]
+        expected = [
+            0.50 * math.sin(2 * math.pi * index * 440.0 / oscillator.sample_rate)
+            for index in range(4)
+        ]
+
+        for sample, expected_sample in zip(samples, expected):
+            self.assertAlmostEqual(sample, expected_sample, places=12)
 
 
 if __name__ == "__main__":

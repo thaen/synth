@@ -195,7 +195,7 @@ class TerminalLessonApp:
             control_text = f"{control.label} {control.format_value()}"
         self._write(screen, top + 3, left, "|" + self._fit(control_text, width - 2).ljust(width - 2) + "|", attribute)
         self._write(screen, top + 4, left, "|" + self._fit("State: " + self.state.panel_state(panel), width - 2).ljust(width - 2) + "|", attribute)
-        self._write(screen, top + 5, left, "|" + " " * (width - 2) + "|", attribute)
+        self._write(screen, top + 5, left, "|" + self._fit(panel.format_meter(), width - 2).ljust(width - 2) + "|", attribute)
         self._write(screen, top + 6, left, "+" + "-" * (width - 2) + "+", attribute)
 
     @staticmethod
