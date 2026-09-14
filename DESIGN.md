@@ -1,6 +1,6 @@
 # This document directs an interactive book about modular synthesis.
 
-> **The terminal course design supersedes this document's interface, output-adapter, and lesson-order decisions as of 2026-09-14.** The reusable module, jack, cable, board-configuration, and generic-viewer principles in this document remain the project model. [The terminal course design](TUI-DESIGN.md) is the implementation handoff for the next prototype.
+> **The terminal course design supersedes this document's interface, output-adapter, and lesson-order decisions as of 2026-09-14.** The reusable module, jack, cable, board-configuration, and generic-viewer principles in this document remain the project model. [The terminal course design](TUI-DESIGN.md) defines the next prototype.
 
 The book teaches sound and digital instruments by building one small modular synthesizer from a blank board. A reader hears a result, sees the physical model that makes it, reads a short explanation, and can inspect the same code that drives the board. The work begins with one sine oscillator at A4, which is 440 Hz, and ends with a playable instrument that can sequence, shape, mix, and repeat sound.
 

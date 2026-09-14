@@ -1,6 +1,6 @@
 # The terminal course builds one synthesizer in public.
 
-This document defines the next prototype for the synthesizer course. It replaces the Pygame board with a terminal user interface, while keeping the current lesson configurations, modules, jacks, cables, and signal evaluation model. It gives implementation agents one target for the first five lessons.
+This document defines the next prototype for the synthesizer course. It replaces the Pygame board with a terminal user interface, while keeping the current lesson configurations, modules, jacks, cables, and signal evaluation model. It defines the first five lessons as one growing instrument.
 
 The course has two goals. A learner can hear each new part change the signal, and the learner can name the term that appears on a synthesizer panel. The application does not teach circuit design in these lessons. It teaches what a sound signal does as it moves through a small instrument.
 
@@ -176,27 +176,13 @@ The teaching panel defines a term before it relies on the term. It keeps these d
 
 The application shows a definition in the current lesson, a short definition in the `?` reference, and a longer explanation in the matching Markdown lesson. The text does not use marketing labels such as `warm`, `fat`, or `analog` as if they have fixed technical meanings.
 
-## The implementation has a bounded first increment.
-
-The first implementation increment ends after Lesson 1. It has the following completion conditions.
-
-1. Running `python3 -m synth_tui --lesson 1` opens a terminal application that fits a standard 80-by-24 terminal, with a documented wider layout for 100 columns or more.
-2. The application shows the two panels, the cable, the selected-module teaching panel, and the complete key reference.
-3. Pressing `b` starts and stops a real 440 Hz sine tone through the selected audio device, and it changes the source and cable animation state.
-4. Pressing left or right moves the selection between the source and the audio output. Pressing up or down on either panel has a clear no-control status message.
-5. Pressing `r` stops sound and restores the initial state. Pressing `q` stops the stream before the terminal closes.
-6. Unit tests verify the fixed oscillator frequency, the audio path, the start and stop state machine, selected-module movement, and the adapter's behavior when no audio device is available.
-7. A short Lesson 1 Markdown page uses the same terms and key behavior as the running program.
-
-The second increment adds only the Gain module and Lesson 2. It must not introduce waveform selection, musical-key mapping, envelopes, or filters.
-
 ## The Ableton site is a reference, not a source dependency.
 
 Ableton Learning Synths has a useful course structure. Its current course begins with amplitude and pitch, then presents envelopes, LFOs, oscillators, filters, recipes, and a playground. Its filter lesson connects brightness with high-frequency content, and its envelope lesson describes envelopes as modulators. Those teaching choices support the proposed order, but the terminal course has its own screen, terminology, source model, interaction model, and text.
 
 The 2026-09-14 review found that the Ableton site delivers a minified `musiclab.js` bundle and a license file that identifies third-party components. No public Learning Synth source repository appeared in Ableton's public GitHub organization during that review. The project must not copy, deminify, or treat that bundle as reusable source without express permission from Ableton and the relevant rights holders. The site is a behavior and teaching reference only.
 
-The implementation agents can consult these sources when a detail needs confirmation.
+These sources support the design when a detail needs confirmation.
 
 - [Ableton Learning Synths course map](https://learningsynths.ableton.com/en/) records the lesson families and the Playground scope.
 - [Ableton's filter lesson](https://learningsynths.ableton.com/en/filters/filters-in-synthesizers) defines a low-pass filter in terms of lower and higher sound components and links brightness to high-frequency content.
