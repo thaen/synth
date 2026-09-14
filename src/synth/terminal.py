@@ -68,9 +68,7 @@ class TerminalLessonState:
             self.status_message = f"{self.selected_panel.label} has no exposed control in this lesson."
             return
         control = controls[0]
-        self.audio.apply_terminal_change(
-            lambda: control.control.set_value(control.control.value + direction * control.step)
-        )
+        self.audio.apply_terminal_change(lambda: control.adjust(direction))
         self.status_message = f"{control.label}: {control.format_value()}."
 
     def _toggle_audio(self) -> None:

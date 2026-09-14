@@ -5,8 +5,9 @@ import unittest
 
 from lessons.lesson_01 import mount_base_board
 from synth.gain import Gain
+from synth.low_pass_filter import LowPassFilter
 from synth.oscillator import Oscillator
-from synth.patch import PatchCable
+from synth.patch import OutputJack, PatchCable, VoltageRole
 from synth.pitch_control import PitchControl
 
 
@@ -114,6 +115,47 @@ class BoardTests(unittest.TestCase):
         self.assertEqual(len(sine_trace), 5)
         self.assertTrue(all(len(row) == 15 for row in sine_trace))
         self.assertNotEqual(sine_trace, square_trace)
+
+    def test_low_pass_filter_has_one_cutoff_control_and_filters_high_frequency_changes(self) -> None:
+        """The one-pole filter has no resonance control and attenuates an alternating signal."""
+        source = OutputJack("Source", VoltageRole.AUDIO)
+        low_cutoff = LowPassFilter(sample_rate=44_100, cutoff_hz=200.0)
+        high_cutoff = LowPassFilter(sample_rate=44_100, cutoff_hz=12_000.0)
+        PatchCable(source, low_cutoff.audio_input)
+        PatchCable(source, high_cutoff.audio_input)
+
+        low_samples = []
+        high_samples = []
+        for index in range(1_000):
+            source.voltage = 1.0 if index % 2 == 0 else -1.0
+            low_cutoff.advance()
+            high_cutoff.advance()
+            if index >= 900:
+                low_samples.append(abs(low_cutoff.audio_output.voltage))
+                high_samples.append(abs(high_cutoff.audio_output.voltage))
+
+        self.assertEqual(len(low_cutoff.controls()), 1)
+        self.assertEqual(low_cutoff.cutoff_knob.minimum, 200.0)
+        self.assertEqual(low_cutoff.cutoff_knob.maximum, 12_000.0)
+        self.assertGreater(sum(high_samples) / len(high_samples), 20 * sum(low_samples) / len(low_samples))
+
+    def test_low_pass_filter_cutoff_moves_by_semitone_ratios_and_its_trace_changes(self) -> None:
+        """The cutoff uses a logarithmic musical step and supplies a stable response trace."""
+        low_pass_filter = LowPassFilter(sample_rate=44_100)
+        open_trace = low_pass_filter.ascii_response_trace()
+
+        low_pass_filter.shift_cutoff(-12)
+        self.assertAlmostEqual(low_pass_filter.cutoff_hz, 6_000.0)
+        low_pass_filter.shift_cutoff(12)
+        self.assertAlmostEqual(low_pass_filter.cutoff_hz, 12_000.0)
+        for _ in range(100):
+            low_pass_filter.shift_cutoff(-1)
+
+        closed_trace = low_pass_filter.ascii_response_trace()
+        self.assertEqual(low_pass_filter.cutoff_hz, 200.0)
+        self.assertEqual(len(open_trace), 5)
+        self.assertTrue(all(len(row) == 15 for row in open_trace))
+        self.assertNotEqual(open_trace, closed_trace)
 
 
 if __name__ == "__main__":
