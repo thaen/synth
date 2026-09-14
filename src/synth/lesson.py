@@ -17,9 +17,12 @@ class VisibleControl:
     label: str
     step: float
     description: str = ""
+    value_formatter: Callable[[], str] | None = None
 
     def format_value(self) -> str:
         """Return the current value in the form that belongs on a terminal panel."""
+        if self.value_formatter is not None:
+            return self.value_formatter()
         suffix = f" {self.control.unit}" if self.control.unit else ""
         return f"{self.control.value:.2f}{suffix}"
 
@@ -36,6 +39,7 @@ class ModulePresentation:
     meter: Callable[[], float] | None = None
     inactive_state: str = "idle"
     active_state: str = "active"
+    trace: Callable[[], tuple[str, ...]] | None = None
 
     def format_readout(self) -> str:
         """Return the panel's declared readout without teaching module details to the view."""
@@ -53,6 +57,10 @@ class ModulePresentation:
         level = max(0.0, min(1.0, self.meter()))
         filled = int(level * width + 0.5)
         return "Signal [" + "#" * filled + "." * (width - filled) + "]"
+
+    def format_trace(self) -> tuple[str, ...]:
+        """Return a lesson-declared ASCII trace without giving the view module rules."""
+        return self.trace() if self.trace is not None else ()
 
 
 @dataclass(frozen=True)

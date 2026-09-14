@@ -150,6 +150,7 @@ class TerminalLessonApp:
         panel_width = self._panel_width(width, len(panels))
         panel_lefts = self._panel_lefts(width, panel_width, len(panels))
         panel_top = 2
+        panel_height = self._panel_height(panels)
         for index, panel in enumerate(panels):
             self._draw_panel(
                 screen,
@@ -160,7 +161,7 @@ class TerminalLessonApp:
                 index == self.state.selected_index,
             )
         self._draw_cables(screen, panel_top + 4, panel_width, panels, panel_lefts)
-        teaching_top = panel_top + 8
+        teaching_top = panel_top + panel_height + 1
         if self.state.help_is_visible:
             lines = [
                 "Keyboard reference: left/right select a module; up/down change its exposed control.",
@@ -196,7 +197,15 @@ class TerminalLessonApp:
         self._write(screen, top + 3, left, "|" + self._fit(control_text, width - 2).ljust(width - 2) + "|", attribute)
         self._write(screen, top + 4, left, "|" + self._fit("State: " + self.state.panel_state(panel), width - 2).ljust(width - 2) + "|", attribute)
         self._write(screen, top + 5, left, "|" + self._fit(panel.format_meter(), width - 2).ljust(width - 2) + "|", attribute)
-        self._write(screen, top + 6, left, "+" + "-" * (width - 2) + "+", attribute)
+        trace = panel.format_trace()
+        for offset, trace_line in enumerate(trace):
+            self._write(screen, top + 6 + offset, left, "|" + self._fit(trace_line, width - 2).ljust(width - 2) + "|", attribute)
+        self._write(screen, top + 6 + len(trace), left, "+" + "-" * (width - 2) + "+", attribute)
+
+    @staticmethod
+    def _panel_height(panels: list[ModulePresentation]) -> int:
+        """Return the height needed by the tallest lesson-declared panel trace."""
+        return 7 + max((len(panel.format_trace()) for panel in panels), default=0)
 
     @staticmethod
     def _fit(text: str, width: int) -> str:

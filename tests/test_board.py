@@ -5,6 +5,7 @@ import unittest
 
 from lessons.lesson_01 import mount_base_board
 from synth.gain import Gain
+from synth.oscillator import Oscillator
 from synth.patch import PatchCable
 from synth.pitch_control import PitchControl
 
@@ -83,6 +84,36 @@ class BoardTests(unittest.TestCase):
 
         for sample, expected_sample in zip(samples, expected):
             self.assertAlmostEqual(sample, expected_sample, places=12)
+
+    def test_oscillator_generates_each_waveform_from_one_phase_clock(self) -> None:
+        """Each waveform has deterministic samples at the same four phase positions."""
+        oscillator = Oscillator(base_frequency_hz=1.0, sample_rate=4)
+        expected_by_waveform = {
+            "Sine": [0.0, 1.0, 0.0, -1.0],
+            "Triangle": [-1.0, 0.0, 1.0, 0.0],
+            "Square": [1.0, 1.0, -1.0, -1.0],
+            "Sawtooth": [-1.0, -0.5, 0.0, 0.5],
+        }
+
+        for index, (waveform, expected) in enumerate(expected_by_waveform.items()):
+            oscillator.waveform_knob.set_value(float(index))
+            oscillator.reset()
+            samples = [oscillator.next_sample() for _ in range(4)]
+
+            self.assertEqual(oscillator.waveform_name, waveform)
+            for sample, expected_sample in zip(samples, expected):
+                self.assertAlmostEqual(sample, expected_sample, places=12)
+
+    def test_ascii_trace_covers_one_selected_waveform_cycle(self) -> None:
+        """The waveform trace has stable dimensions and changes with its selected shape."""
+        oscillator = Oscillator(base_frequency_hz=440.0, sample_rate=44_100)
+        sine_trace = oscillator.ascii_trace()
+        oscillator.waveform_knob.set_value(2.0)
+        square_trace = oscillator.ascii_trace()
+
+        self.assertEqual(len(sine_trace), 5)
+        self.assertTrue(all(len(row) == 15 for row in sine_trace))
+        self.assertNotEqual(sine_trace, square_trace)
 
 
 if __name__ == "__main__":
