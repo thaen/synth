@@ -33,6 +33,7 @@ class ModulePresentation:
     prose: tuple[str, str]
     visible_controls: tuple[VisibleControl, ...] = ()
     readout: str | Callable[[], str] | None = None
+    meter: Callable[[], float] | None = None
     inactive_state: str = "idle"
     active_state: str = "active"
 
@@ -44,6 +45,14 @@ class ModulePresentation:
             return self.readout
         state = self.module.display_state()
         return state[0] if state else ""
+
+    def format_meter(self, width: int = 8) -> str:
+        """Return a compact meter from a lesson-declared normalized signal level."""
+        if self.meter is None:
+            return ""
+        level = max(0.0, min(1.0, self.meter()))
+        filled = int(level * width + 0.5)
+        return "Signal [" + "#" * filled + "." * (width - filled) + "]"
 
 
 @dataclass(frozen=True)

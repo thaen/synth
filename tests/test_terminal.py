@@ -23,14 +23,15 @@ class TerminalLessonStateTests(unittest.TestCase):
         self.assertEqual(state.selected_panel.label, "Sine Wave Creator")
 
     def test_adjustment_uses_the_lesson_declared_visible_control(self) -> None:
-        """The terminal changes the configured pitch knob by its declared step."""
+        """The terminal changes the configured gain knob by its declared step."""
         lesson = build_lesson_02()
         state = TerminalLessonState(lesson, DeterministicAudioCollector())
 
+        state.dispatch("right")
         state.dispatch("up")
 
-        self.assertAlmostEqual(lesson.visible_panels[0].visible_controls[0].control.value, 1 / 12)
-        self.assertIn("Pitch", state.status_message)
+        self.assertAlmostEqual(lesson.visible_panels[1].visible_controls[0].control.value, 0.55)
+        self.assertIn("Gain", state.status_message)
 
     def test_adjustment_reports_a_panel_without_an_exposed_control(self) -> None:
         """The terminal keeps responding when a selected module has no lesson control."""
@@ -45,6 +46,7 @@ class TerminalLessonStateTests(unittest.TestCase):
         lesson = build_lesson_02()
         collector = DeterministicAudioCollector()
         state = TerminalLessonState(lesson, collector)
+        state.dispatch("right")
         state.dispatch("up")
         state.dispatch("b")
         samples = collector.collect(4)
@@ -55,7 +57,7 @@ class TerminalLessonStateTests(unittest.TestCase):
         self.assertTrue(state.help_is_visible)
         state.dispatch("r")
         self.assertFalse(collector.is_active)
-        self.assertEqual(lesson.visible_panels[0].visible_controls[0].control.value, 0.0)
+        self.assertEqual(lesson.visible_panels[1].visible_controls[0].control.value, 0.50)
         state.dispatch("q")
         self.assertFalse(state.is_open)
 
@@ -165,6 +167,84 @@ class TerminalLessonStateTests(unittest.TestCase):
             text for row, _column, text in screen.calls if row == 6 and ">" in text
         )
         self.assertNotEqual(first_active_cable, second_active_cable)
+
+    def test_lesson_two_places_gain_between_the_original_panels(self) -> None:
+        """Lesson 2 retains the source and output while it inserts the gain stage."""
+        lesson = build_lesson_02()
+        source, gain, output = lesson.visible_panels
+
+        self.assertEqual([panel.label for panel in lesson.visible_panels], [
+            "Sine Wave Creator",
+            "Gain",
+            "Audio Output",
+        ])
+        self.assertEqual(gain.visible_controls[0].control.minimum, 0.0)
+        self.assertEqual(gain.visible_controls[0].control.maximum, 1.0)
+        self.assertEqual(gain.visible_controls[0].step, 0.05)
+        self.assertEqual(len(lesson.board.cables), 2)
+        self.assertIs(lesson.board.cables[0].source.owner, source.module)
+        self.assertIs(lesson.board.cables[0].destination.owner, gain.module)
+        self.assertIs(lesson.board.cables[1].source.owner, gain.module)
+        self.assertIs(lesson.board.cables[1].destination.owner, output.module)
+
+    def test_lesson_two_gain_scales_samples_and_its_meter(self) -> None:
+        """The lesson has a deterministic multiplier and a meter from the scaled signal."""
+        lesson = build_lesson_02()
+        collector = DeterministicAudioCollector()
+        state = TerminalLessonState(lesson, collector)
+        gain_panel = lesson.visible_panels[1]
+
+        state.dispatch("b")
+        samples_at_half_gain = collector.collect(26)
+        expected_at_half_gain = [
+            0.50 * math.sin(2 * math.pi * index * 440.0 / lesson.sample_rate)
+            for index in range(26)
+        ]
+        for sample, expected_sample in zip(samples_at_half_gain, expected_at_half_gain):
+            self.assertAlmostEqual(sample, expected_sample, places=12)
+        self.assertEqual(gain_panel.format_meter(), "Signal [####....]")
+
+        state.dispatch("right")
+        for _ in range(5):
+            state.dispatch("down")
+        collector.collect(1)
+
+        self.assertAlmostEqual(gain_panel.visible_controls[0].control.value, 0.25)
+        self.assertEqual(gain_panel.format_meter(), "Signal [##......]")
+
+    def test_lesson_two_draws_the_declared_signal_meter_without_lesson_branches(self) -> None:
+        """The generic terminal renderer reads the configured meter from the gain panel."""
+        class RecordingScreen:
+            """This replacement records terminal output without a terminal emulator."""
+
+            def __init__(self) -> None:
+                self.calls: list[tuple[int, int, str]] = []
+
+            def getmaxyx(self) -> tuple[int, int]:
+                return (20, 80)
+
+            def erase(self) -> None:
+                self.calls = []
+
+            def addnstr(
+                self, row: int, column: int, text: str, count: int, _attribute: int
+            ) -> None:
+                self.calls.append((row, column, text[:count]))
+
+            def refresh(self) -> None:
+                return None
+
+        collector = DeterministicAudioCollector()
+        state = TerminalLessonState(build_lesson_02(), collector)
+        state.dispatch("b")
+        collector.collect(26)
+        screen = RecordingScreen()
+
+        TerminalLessonApp(state)._draw(screen)
+
+        self.assertTrue(
+            any("Signal [####....]" in text for _row, _column, text in screen.calls)
+        )
 
 
 class AudioAdapterTests(unittest.TestCase):
