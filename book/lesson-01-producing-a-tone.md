@@ -34,7 +34,7 @@ afplay and the selected macOS output device
 speaker motion and an audible 440 Hz tone
 ```
 
-The WAV file is a container around the PCM values. PCM, or pulse-code modulation, is a direct list of speaker positions measured at fixed times. In this lesson there is one channel, so the same simple stream represents one mono sound source.
+The WAV file is a container around the PCM values. PCM, or pulse-code modulation, is a direct list of speaker positions measured at fixed times. In this lesson there is one channel, so the same simple stream represents one mono sound source. The `synth.audio_output` module now holds WAV writing and macOS playback, so later lessons can focus on instrument modules.
 
 ## You Can Run the Program.
 

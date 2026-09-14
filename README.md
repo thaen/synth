@@ -2,16 +2,13 @@
 
 This project builds small digital instruments from generated audio samples. Each lesson has a runnable Python program and a chapter that explains the program in plain terms.
 
-Python is the teaching language because its standard library can make a WAV file without installing a package. On macOS, `afplay` sends that file to the selected sound output device. Later lessons can keep the sound rules and exchange this file-based output path for a real-time audio path.
+Python is the teaching language because its standard library can make a WAV file without installing a package. On macOS, `afplay` sends that file to the selected sound output device. The instrument modules live in `src/synth/`, while `synth.audio_output` keeps the device boundary separate from the instrument.
 
 ## The Lessons Build One Instrument Layer at a Time.
 
-1. [Producing a Tone](book/lesson-01-producing-a-tone.md) generates A4, the 440 Hz concert A.
-2. Multiple notes will mix several generated waves into one stream.
-3. Level control will scale sample values and introduce clipping.
-4. A note envelope will control attack, sustain, and release.
-5. A sequencer will schedule notes against a clock.
-6. Loops and effects will transform the generated stream.
+1. [Lesson 1: Producing a Tone](book/lesson-01-producing-a-tone.md) generates A4, the 440 Hz concert A.
+2. [Lesson 2: Creating an Oscillator](book/lesson-02-oscillator.md) turns that tone rule into a reusable module.
+3. [The course map](book/course-map.md) records the module order and code boundaries for the growing instrument.
 
 ## You Can Run the First Lesson.
 
@@ -19,6 +16,7 @@ Run the program from this directory.
 
 ```sh
 python3 src/lesson_01_tone.py
+python3 src/lesson_02_oscillator.py
 ```
 
-The program writes three seconds of A4 to `output/lesson-01-a4.wav` and starts `afplay`, which plays the file through macOS's selected sound output device. The WAV file is derived output and is not stored in Git.
+Each program writes three seconds of A4 to `output/` and starts `afplay`, which plays the file through macOS's selected sound output device. The WAV files are derived output and are not stored in Git.
