@@ -35,3 +35,5 @@ python3 src/terminal_view.py --lesson 5
 The two audio programs write three seconds of A4 to `output/` and start `afplay`, which plays the file through macOS's selected sound output device. The board display loads the same lesson configuration as the matching audio program. The WAV files are derived output and are not stored in Git.
 
 The terminal program uses `sounddevice` only after `b` requests audio. A missing device leaves the terminal interface open and reports its status. The terminal controls are `Left` and `Right` for selection, `Up` and `Down` for the selected lesson control, `b` for audio, `r` for reset, `?` for help, and `q` for quit.
+
+[The terminal synth quickstart](book/terminal-quickstart.md) explains the lesson commands, controls, audio fallback, and code path.
