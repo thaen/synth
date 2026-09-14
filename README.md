@@ -7,10 +7,10 @@ Python is the teaching language because its standard library can make a WAV file
 ## The Lessons Build One Instrument Layer at a Time.
 
 1. [Lesson 1: Producing a Tone](book/lesson-01-producing-a-tone.md) generates A4, the 440 Hz concert A.
-2. [Lesson 2: Adjusting the Oscillator](book/lesson-02-oscillator.md) makes the frequency setting visible on the same board.
+2. [Lesson 2: Adding Pitch Control](book/lesson-02-oscillator.md) mounts a pitch-control module and its control-voltage cable.
 3. [The course map](book/course-map.md) records the module, jack, and cable order for the growing board.
 
-The Lesson 2 board display is in `src/lesson_02_view.py`. It shows the oscillator module, the speaker-output module, their jacks, and the cable between them while using the same mounted board as the audio lesson.
+The one board display is `src/view.py`. Run it with `--lesson 1` or `--lesson 2`; it loads the requested configuration from `src/lessons/` and draws the modules, jacks, cables, and front-panel controls that the configuration supplies.
 
 ## You Can Run the Lesson Programs.
 
@@ -20,7 +20,8 @@ Run the program from this directory.
 python3 -m pip install --user -r requirements.txt
 python3 src/lesson_01_tone.py
 python3 src/lesson_02_oscillator.py
-python3 src/lesson_02_view.py
+python3 src/view.py --lesson 1
+python3 src/view.py --lesson 2
 ```
 
-The two audio programs write three seconds of A4 to `output/` and start `afplay`, which plays the file through macOS's selected sound output device. The Lesson 2 board display shows the same mounted modules and cable. The WAV files are derived output and are not stored in Git.
+The two audio programs write three seconds of A4 to `output/` and start `afplay`, which plays the file through macOS's selected sound output device. The board display loads the same lesson configuration as the matching audio program. The WAV files are derived output and are not stored in Git.

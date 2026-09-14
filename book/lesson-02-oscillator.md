@@ -1,55 +1,58 @@
-# Lesson 2 Makes the Oscillator's Frequency Setting Visible.
+# Lesson 2 Controls an Oscillator's Pitch.
 
-Lesson 2 keeps the first board's two modules and its one patch cable. The board still has one sine oscillator connected directly to one speaker-output module. This lesson focuses on the oscillator's frequency setting, which determines how quickly its voltage repeats.
-
-```text
-+---------------------------+       patch cable       +---------------------------+
-| SINE OSCILLATOR           |------------------------>| SPEAKER OUTPUT            |
-| Frequency: 440 Hz         |      audio voltage      | Audio input               |
-| Sine output jack          |                         | Speaker                   |
-+---------------------------+                         +---------------------------+
-```
-
-The cable carries audio voltage. The frequency setting is a front-panel setting on the oscillator itself. It changes the voltage made by the oscillator before that voltage enters the cable.
-
-## A Sine Oscillator Repeats One Shape.
-
-A sine wave rises smoothly from zero to a positive peak, returns to zero, falls to a negative peak, and returns to zero. One complete rise and fall is a cycle. The shape made during one cycle is called a waveform.
-
-The frequency tells the oscillator how many cycles to make each second. A 440 Hz setting makes 440 cycles in one second. A 220 Hz setting makes 220 cycles in one second, so its tone is one octave lower. An 880 Hz setting makes 880 cycles in one second, so its tone is one octave higher.
-
-## The Oscillator Remembers Its Position.
-
-The oscillator must remember where it is in the current cycle between sample times. That remembered position is called phase. A phase of `0.0` is the start of the cycle. A phase of `0.5` is halfway through the cycle. After a phase reaches one complete cycle, it returns to `0.0`.
-
-The board uses 44,100 sample times each second. At a frequency of 440 Hz, the oscillator moves forward by this fraction of a cycle for every sample:
+Lesson 2 keeps the sine oscillator, audio output, and audio cable from Lesson 1. It adds one new physical part: a pitch-control module. This module makes a voltage whose job is to set the oscillator's pitch.
 
 ```text
-440 / 44100 = 0.00998 cycles per sample
++------------------+  control cable  +---------------------------+   audio cable   +------------------+
+| PITCH CONTROL    |---------------->| SINE OSCILLATOR           |---------------->| AUDIO OUTPUT     |
+| Pitch knob       |  pitch voltage  | Pitch input               | audio voltage  | Audio input      |
+| Pitch output     |                 | Sine output               |                | Monitor level    |
++------------------+                 +---------------------------+                +------------------+
 ```
 
-The `SineOscillator.advance()` operation places the voltage for its current phase on the sine-output jack, then advances phase by that amount. The cable always carries the voltage currently on its source jack.
+The control cable carries control voltage. The audio cable carries audio voltage. Both are changing electrical values, but they have different jobs on this board. Control voltage sets a module parameter. Audio voltage travels toward the audio output and becomes sound.
 
-## The Board Has a Physical-Style Code Model.
+## An Octave Doubles or Halves Frequency.
 
-The [oscillator code](../src/synth/oscillator.py) has a `sine_output` jack. The [speaker-output code](../src/synth/output.py) has an `audio_input` jack. The [patch code](../src/synth/patch.py) connects those two jacks with a `PatchCable`. The [board code](../src/synth/board.py) advances the mounted modules and reads the voltage at the speaker module.
+An octave is the interval between two tones whose frequencies have a ratio of two. A tone at 880 Hz is one octave above a tone at 440 Hz because 880 is twice 440. A tone at 220 Hz is one octave below 440 Hz because 220 is half 440.
+
+The pitch-control module uses a common analog-synthesizer convention called one volt per octave. Its pitch knob produces control voltage. Raising the knob by one volt doubles the oscillator frequency. Lowering it by one volt halves the oscillator frequency.
 
 ```text
-SineOscillator.advance()
-        |
-        v
-Sine output jack holds the current voltage
-        |
-        v
-PatchCable carries that voltage
-        |
-        v
-Speaker output reads its Audio input jack
+-1 V → 220 Hz → A3
+ 0 V → 440 Hz → A4
++1 V → 880 Hz → A5
 ```
 
-The audio program and the board display use the same mounted-board setup from [first_board.py](../src/synth/first_board.py). The audio program asks the board for 132,300 samples and plays them. The board display advances the same board in groups of ten samples so its phase movement is visible.
+The oscillator starts with a base frequency of 440 Hz. It calculates its current frequency with this rule:
 
-## You Can Hear the Board at Different Frequencies.
+```text
+frequency = 440 × 2^(pitch voltage)
+```
+
+## The New Cable Changes the Oscillator Before It Makes Audio.
+
+At every sample time, the pitch-control module places its knob voltage on `Pitch output`. The control cable carries that voltage to the oscillator's `Pitch input`. The oscillator reads the control voltage, calculates its frequency, and places a sine-wave voltage on `Sine output`. The retained audio cable then carries that voltage to the audio-output module.
+
+The board derives this evaluation order from the direction of the two cables. The physical position of a module in the viewer therefore does not decide when its voltage is calculated.
+
+## The Code Extends the Existing Board.
+
+The [Lesson 2 configuration](../src/lessons/lesson_02.py) starts with the Lesson 1 board, mounts a `PitchControl` module, and patches one control cable to the existing oscillator. The [pitch-control code](../src/synth/pitch_control.py) owns the knob and output jack. The existing [oscillator code](../src/synth/oscillator.py) reads the new input jack.
+
+The [generic viewer](../src/view.py) reads only module-provided jacks, controls, and panel state. It does not contain Lesson 2-specific drawing code.
+
+## You Can See the Larger Board.
+
+Run this command from the project directory:
+
+```sh
+python3 src/view.py --lesson 2
+```
+
+The command starts the same `view.py` program used by Lesson 1. The Lesson 2 configuration supplies one extra module and one extra cable, so the board has three visible modules and two visible cables. Drag or click the Pitch knob to change its voltage. The oscillator panel then shows the frequency that the control voltage produces.
+
+## You Can Hear the Lesson 2 Board.
 
 Run this command from the project directory:
 
@@ -57,17 +60,6 @@ Run this command from the project directory:
 python3 src/lesson_02_oscillator.py
 ```
 
-Change `FREQUENCY_HZ` in `src/lesson_02_oscillator.py` from `440.0` to `220.0`, then run the program again. The board retains the same modules and cable while the oscillator repeats more slowly.
+The program loads the same Lesson 2 configuration and plays its default zero-volt setting, which is A4 at 440 Hz.
 
-## You Can See the Mounted Board.
-
-Run these commands from the project directory:
-
-```sh
-python3 -m pip install --user -r requirements.txt
-python3 src/lesson_02_view.py
-```
-
-The display shows the oscillator module, the speaker-output module, and the cable between their jacks. Its frequency control changes the oscillator setting. The Run control advances the board at a visible speed, Request 10 Samples advances it once, and Reset Phase returns the oscillator to the start of its cycle.
-
-The next lesson will add a musical pitch control to the same board.
+The next lesson will add a musical control that produces the pitch voltages for named notes.

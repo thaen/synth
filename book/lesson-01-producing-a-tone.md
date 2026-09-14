@@ -1,59 +1,55 @@
-# Lesson 1 Mounts a Board That Makes One Tone.
+# Lesson 1 Produces a Steady Tone.
 
-An instrument board is a surface that holds the electronic parts of an instrument. A single part on that board is called a module. A module has connection points called jacks, and a cable plugs one jack into another.
+The first board produces a steady A4 tone, which repeats 440 times each second. A4 is the musical A at 440 Hz. A tone at 40 Hz would be much lower and would not be the usual A reference.
 
-The first instrument board has two modules and one cable. A sine oscillator produces a repeating voltage, and a speaker-output module receives that voltage and sends it to the Mac's sound device.
+An instrument board is a surface that holds electronic parts. Each part is a module. A module has connection points called jacks, and a patch cable plugs an output jack into an input jack.
+
+The first board has a sine oscillator, an audio-output module, and one audio cable.
 
 ```text
-+---------------------------+       patch cable       +---------------------------+
-| SINE OSCILLATOR           |------------------------>| SPEAKER OUTPUT            |
-| Frequency: 440 Hz         |      audio voltage      | Audio input               |
-| Sine output jack          |                         | Speaker                   |
++---------------------------+       audio cable       +---------------------------+
+| SINE OSCILLATOR           |------------------------>| AUDIO OUTPUT              |
+| Base frequency: 440 Hz    |      audio voltage      | Audio input               |
+| Sine output jack          |                         | Monitor level: 0.25       |
 +---------------------------+                         +---------------------------+
 ```
 
-This board makes A4, the musical A at 440 Hz. A tone at 40 Hz would be much lower and would not be the usual A reference.
+## The Oscillator Produces a Repeating Voltage.
 
-## A Module Is a Physical Part of the Board.
+The sine oscillator produces a repeating electrical pattern called a sine wave. The pattern rises smoothly from zero to a positive peak, returns to zero, falls to a negative peak, and returns to zero. One complete rise and fall is one cycle.
 
-A module is one physical unit mounted on a synthesizer board. It has a particular job, front-panel controls, and connection points called jacks. The sine oscillator's job is to produce a voltage that follows the shape of a sine wave. The speaker-output module's job is to receive a voltage at its audio-input jack and pass it to a speaker.
+The oscillator's base frequency is 440 Hz, so it makes 440 cycles each second. In this digital model, one number represents the voltage at one instant. At every sample time, the oscillator places its next voltage on the jack named `Sine output`.
 
-The program uses classes to represent those physical parts. `SineOscillator` represents the oscillator module. `SpeakerOutput` represents the speaker-output module. The code keeps the two modules separate for the same reason that the physical board keeps them separate: each part has one job and a visible connection.
+The board has 44,100 sample times each second. The audio adapter converts the resulting stream of numbers to an electrical signal, and a speaker converts that changing electrical signal to motion and air pressure.
 
-## A Cable Carries a Voltage.
+## The Cable Carries Audio Voltage.
 
-A patch cable plugs from an output jack on one module into an input jack on another module. The oscillator has a jack named `Sine output`. The speaker module has a jack named `Audio input`. The cable connects those two jacks.
+The cable plugs from the oscillator's `Sine output` jack to the audio-output module's `Audio input` jack. The cable carries audio voltage because this voltage becomes the sound heard at the end of the signal path.
 
-At every sample time, the oscillator places one number on its output jack. That number represents the voltage present on the physical output jack at that instant. The cable carries the number to the speaker module's input jack. The speaker module reads that number.
-
-The program uses 44,100 sample times each second. At a 440 Hz setting, the oscillator repeats its sine-wave cycle 440 times during one second.
-
-## The Board Runs on a Shared Clock.
-
-The board advances once for each sample. First, the oscillator places its next voltage on the sine-output jack. Then, the speaker module reads the cable connected to its audio-input jack. That voltage becomes the next value sent to the sound device.
+The audio-output module has a monitor-level control set to 0.25. It multiplies the incoming audio voltage by 0.25 before the audio adapter receives it. That visible control keeps the first tone at a restrained level.
 
 ```text
-sample 1: oscillator output voltage → cable → speaker input voltage
-sample 2: oscillator output voltage → cable → speaker input voltage
-sample 3: oscillator output voltage → cable → speaker input voltage
+oscillator output voltage → audio cable → audio-output voltage → audio adapter → speaker
 ```
 
-The sound device receives 44,100 such values per second. It converts those values to an electrical signal, and its speaker converts the changing electrical signal into physical motion and then into changing air pressure.
+## The Code Follows the Board.
 
-## The Program Mounts and Patches the Board.
+The [Lesson 1 configuration](../src/lessons/lesson_01.py) mounts the sine oscillator and audio output, then patches their two jacks. The [board code](../src/synth/board.py) follows the cable direction when it advances modules at each sample time. The [audio program](../src/lesson_01_tone.py) loads the configuration, asks the board for samples, and sends the final samples to the audio adapter.
 
-The code in `synth/first_board.py` assembles the first board in the same order that a person would assemble hardware: create the modules, mount them, and connect a cable.
+The configuration, board, and audio program are the three files to read in that order. Each file has one role: describe the physical patch, advance the mounted modules, and deliver completed audio samples.
 
-```python
-oscillator = SineOscillator(frequency_hz, sample_rate)
-speaker = SpeakerOutput()
-board = Board(speaker)
-board.mount(oscillator)
-board.mount(speaker)
-board.patch(oscillator.sine_output, speaker.audio_input)
+## The Generic Viewer Loads This Board.
+
+The board viewer is one program for the whole course. It imports a lesson configuration by number, then draws the modules, jacks, cables, controls, and panel state that the configuration supplies.
+
+Run these commands from the project directory:
+
+```sh
+python3 -m pip install --user -r requirements.txt
+python3 src/view.py --lesson 1
 ```
 
-The lesson program asks this completed board for 132,300 samples. Three seconds at 44,100 samples per second require 132,300 samples. The output adapter writes those samples into a WAV file and asks macOS to play the file.
+The viewer shows the first board's two modules and one audio cable. The Run control advances the complete board in groups of ten samples, and the audio-output voltage display shows the voltage currently arriving through the cable.
 
 ## You Can Hear the First Board.
 
@@ -63,6 +59,6 @@ Run this command from the project directory:
 python3 src/lesson_01_tone.py
 ```
 
-The program writes three seconds of A4 to `output/lesson-01-a4.wav` and plays it through the selected macOS sound device.
+The program loads the same Lesson 1 configuration, requests 132,300 samples from its board, writes three seconds of A4 to `output/lesson-01-a4.wav`, and plays the file through the selected macOS sound device.
 
-The next lesson keeps the same cable and speaker module while making the oscillator's frequency setting visible on the board.
+The next lesson adds a pitch-control module and one control-voltage cable to this board.
