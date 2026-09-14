@@ -44,6 +44,15 @@ def build() -> Lesson:
                     "This oscillator starts with a sawtooth waveform, which has high-frequency harmonics.",
                     "The filter receives the signal after Gain, so changing cutoff does not change the oscillator.",
                 ),
+                (
+                    VisibleControl(
+                        oscillator.waveform_knob,
+                        "Waveform",
+                        1.0,
+                        "Changes among Sine, Triangle, Square, and Sawtooth.",
+                        value_formatter=lambda: oscillator.waveform_name,
+                    ),
+                ),
                 readout=lambda: f"{oscillator.waveform_name}  {oscillator.frequency_hz:.2f} Hz",
                 inactive_state="idle",
                 active_state="active",

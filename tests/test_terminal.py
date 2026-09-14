@@ -401,7 +401,9 @@ class TerminalLessonStateTests(unittest.TestCase):
             ["Pitch", "Oscillator", "Gain", "Low-Pass Filter", "Audio Output"],
         )
         self.assertEqual(oscillator.format_readout(), "Sawtooth  440.00 Hz")
-        self.assertEqual(oscillator.visible_controls, ())
+        self.assertEqual(len(oscillator.visible_controls), 1)
+        self.assertEqual(oscillator.visible_controls[0].label, "Waveform")
+        self.assertEqual(oscillator.visible_controls[0].format_value(), "Sawtooth")
         self.assertEqual(len(low_pass_filter.visible_controls), 1)
         self.assertEqual(low_pass_filter.visible_controls[0].label, "Cutoff")
         self.assertEqual(low_pass_filter.visible_controls[0].format_value(), "12000 Hz")
@@ -414,6 +416,22 @@ class TerminalLessonStateTests(unittest.TestCase):
         self.assertIs(lesson.board.cables[3].destination.owner, output.module)
         self.assertIs(lesson.board.cables[1].source.owner, pitch.module)
         self.assertIs(lesson.board.cables[1].destination.owner, oscillator.module)
+
+    def test_lesson_five_retains_an_adjustable_waveform_control(self) -> None:
+        """The retained oscillator control changes waveform and reset restores Sawtooth."""
+        lesson = build_lesson_05()
+        state = TerminalLessonState(lesson, DeterministicAudioCollector())
+
+        state.dispatch("right")
+        state.dispatch("down")
+
+        waveform = lesson.visible_panels[1].visible_controls[0]
+        self.assertEqual(waveform.format_value(), "Square")
+        self.assertEqual(state.status_message, "Waveform: Square.")
+
+        state.dispatch("r")
+
+        self.assertEqual(waveform.format_value(), "Sawtooth")
 
     def test_lesson_five_cutoff_changes_by_a_semitone_and_reset_restores_the_open_filter(self) -> None:
         """The generic terminal adjusts cutoff logarithmically and reset restores the lesson default."""
