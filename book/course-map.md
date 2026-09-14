@@ -17,7 +17,7 @@ Lesson 1 supplies this two-module configuration. The oscillator produces a volta
 1. Lesson 1 adds the sine oscillator and its patch cable to the audio output.
 2. Lesson 2 adds Gain between the oscillator and audio output.
 3. Lesson 3 adds a pitch-control module and its control cable to the oscillator.
-4. Lesson 4 will add waveform choices to the oscillator.
+4. Lesson 4 adds sine, triangle, square, and sawtooth waveform choices to the oscillator.
 5. Lesson 5 will add a low-pass filter between Gain and Audio Output.
 6. Lesson 6 will add a gate-control module and form one playable voice.
 7. Lesson 7 will add an attack-decay envelope for gain.

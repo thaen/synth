@@ -6,6 +6,7 @@ import unittest
 from lessons.lesson_01 import build as build_lesson_01
 from lessons.lesson_02 import build as build_lesson_02
 from lessons.lesson_03 import build as build_lesson_03
+from lessons.lesson_04 import build as build_lesson_04
 from synth.realtime_audio import DeterministicAudioCollector, SoundDeviceAudioAdapter
 from synth.terminal import TerminalLessonApp, TerminalLessonState
 
@@ -304,6 +305,90 @@ class TerminalLessonStateTests(unittest.TestCase):
         self.assertTrue(collector.is_active)
         self.assertEqual(lesson.visible_panels[0].format_readout(), "A4  440.00 Hz")
         self.assertEqual(collector.collect(1), [0.0])
+
+    def test_lesson_four_changes_waveform_without_changing_pitch_or_gain(self) -> None:
+        """The waveform control changes the source shape while the earlier control values stay fixed."""
+        lesson = build_lesson_04()
+        collector = DeterministicAudioCollector()
+        state = TerminalLessonState(lesson, collector)
+        pitch, oscillator, gain, output = lesson.visible_panels
+
+        self.assertEqual(
+            [panel.label for panel in lesson.visible_panels],
+            ["Pitch", "Oscillator", "Gain", "Audio Output"],
+        )
+        self.assertEqual(len(lesson.board.cables), 3)
+        self.assertIs(lesson.board.cables[0].source.owner, oscillator.module)
+        self.assertIs(lesson.board.cables[0].destination.owner, gain.module)
+        self.assertIs(lesson.board.cables[1].source.owner, gain.module)
+        self.assertIs(lesson.board.cables[1].destination.owner, output.module)
+        self.assertIs(lesson.board.cables[2].source.owner, pitch.module)
+        self.assertIs(lesson.board.cables[2].destination.owner, oscillator.module)
+
+        state.dispatch("right")
+        state.dispatch("up")
+        state.dispatch("up")
+
+        self.assertEqual(oscillator.visible_controls[0].format_value(), "Square")
+        self.assertEqual(oscillator.format_readout(), "Square  440.00 Hz")
+        self.assertEqual(pitch.visible_controls[0].control.value, 0.0)
+        self.assertEqual(gain.visible_controls[0].control.value, 0.50)
+        self.assertNotEqual(oscillator.format_trace(), build_lesson_04().visible_panels[1].format_trace())
+
+        state.dispatch("b")
+        self.assertEqual(collector.collect(1), [0.50])
+
+    def test_lesson_four_trace_uses_the_generic_terminal_panel_data(self) -> None:
+        """The terminal draws a lesson-declared trace without waveform display rules."""
+        class RecordingScreen:
+            """This replacement records terminal output without a terminal emulator."""
+
+            def __init__(self) -> None:
+                self.calls: list[tuple[int, int, str]] = []
+
+            def getmaxyx(self) -> tuple[int, int]:
+                return (30, 100)
+
+            def erase(self) -> None:
+                self.calls = []
+
+            def addnstr(
+                self, row: int, column: int, text: str, count: int, _attribute: int
+            ) -> None:
+                self.calls.append((row, column, text[:count]))
+
+            def refresh(self) -> None:
+                return None
+
+        state = TerminalLessonState(build_lesson_04(), DeterministicAudioCollector())
+        screen = RecordingScreen()
+        TerminalLessonApp(state)._draw(screen)
+
+        trace = state.lesson.visible_panels[1].format_trace()
+        for trace_line in trace:
+            self.assertTrue(any(trace_line.rstrip() in text for _row, _column, text in screen.calls))
+
+    def test_lesson_four_reset_restores_sine_pitch_gain_and_phase(self) -> None:
+        """The reset command restores each Lesson 4 comparison value and stops audio."""
+        lesson = build_lesson_04()
+        collector = DeterministicAudioCollector()
+        state = TerminalLessonState(lesson, collector)
+
+        state.dispatch("up")
+        state.dispatch("right")
+        state.dispatch("up")
+        state.dispatch("right")
+        state.dispatch("up")
+        state.dispatch("b")
+        collector.collect(4)
+        state.dispatch("r")
+
+        pitch, oscillator, gain, _output = lesson.visible_panels
+        self.assertFalse(collector.is_active)
+        self.assertEqual(pitch.visible_controls[0].control.value, 0.0)
+        self.assertEqual(oscillator.visible_controls[0].format_value(), "Sine")
+        self.assertEqual(gain.visible_controls[0].control.value, 0.50)
+        self.assertEqual(oscillator.module.phase_cycles, 0.0)
 
 
 class AudioAdapterTests(unittest.TestCase):
