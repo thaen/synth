@@ -19,7 +19,6 @@ Run the program from this directory.
 
 ```sh
 python3 src/lesson_01_tone.py
-afplay output/lesson-01-a4.wav
 ```
 
-The program writes three seconds of A4 to `output/lesson-01-a4.wav`. The WAV file is derived output and is not stored in Git.
+The program writes three seconds of A4 to `output/lesson-01-a4.wav` and starts `afplay`, which plays the file through macOS's selected sound output device. The WAV file is derived output and is not stored in Git.

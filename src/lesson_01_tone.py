@@ -3,6 +3,7 @@
 from math import pi, sin
 from pathlib import Path
 import struct
+import subprocess
 import wave
 
 
@@ -23,7 +24,7 @@ def make_sample(sample_number: int) -> int:
     return round(AMPLITUDE * sin(wave_position) * MAX_16_BIT_SAMPLE)
 
 
-def main() -> None:
+def write_wav_file() -> None:
     """Write the complete sample stream in the WAV format."""
     number_of_samples = round(SAMPLE_RATE * DURATION_SECONDS)
     pcm_samples = (make_sample(number) for number in range(number_of_samples))
@@ -37,7 +38,18 @@ def main() -> None:
         wav_file.writeframes(pcm_bytes)
 
     print(f"Wrote {OUTPUT_PATH}")
-    print("Play it with: afplay output/lesson-01-a4.wav")
+
+
+def play_wav_file() -> None:
+    """Ask macOS to play the WAV file through its selected sound device."""
+    print("Playing the tone.")
+    subprocess.run(["afplay", str(OUTPUT_PATH)], check=True)
+
+
+def main() -> None:
+    """Write the WAV file and play it."""
+    write_wav_file()
+    play_wav_file()
 
 
 if __name__ == "__main__":

@@ -42,10 +42,11 @@ From the project directory, run:
 
 ```sh
 python3 src/lesson_01_tone.py
-afplay output/lesson-01-a4.wav
 ```
 
-The first command writes the audio data. The second command asks macOS to play it through the sound device that macOS has selected. Headphones or speakers must be connected, and the system output volume must be audible.
+The program writes the audio data, then starts `afplay`. That macOS program opens the sound device that macOS has selected and plays the WAV file. Headphones or speakers must be connected, and the system output volume must be audible.
+
+The program uses a file instead of a pipe in this lesson because the file makes the PCM data inspectable and reusable. A later real-time lesson can keep an audio buffer in memory and send buffers continuously to an audio engine.
 
 ## These Experiments Change the Tone.
 
