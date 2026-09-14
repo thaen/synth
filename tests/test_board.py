@@ -23,11 +23,12 @@ class BoardTests(unittest.TestCase):
         self.assertEqual(board.evaluation_order()[0], pitch_control)
         self.assertTrue(math.isclose(oscillator.frequency_hz, 880.0))
 
-    def test_cable_rejects_an_audio_output_at_a_control_input(self) -> None:
-        """A cable must match the voltage role expected by its destination jack."""
+    def test_cable_can_connect_an_audio_output_to_a_pitch_input(self) -> None:
+        """A cable carries voltage, while the destination module interprets that voltage."""
         board, oscillator, _audio_output = mount_base_board()
-        with self.assertRaises(ValueError):
-            board.patch(oscillator.sine_output, oscillator.pitch_input)
+        board.patch(oscillator.sine_output, oscillator.pitch_input)
+
+        self.assertIs(oscillator.pitch_input.cable.source, oscillator.sine_output)
 
     def test_input_jack_accepts_only_one_cable(self) -> None:
         """A second cable cannot occupy an already connected input jack."""

@@ -14,3 +14,4 @@ class Lesson:
     board: Board
     sample_rate: int
     panel_modules: list[object]
+    panel_positions: list[tuple[int, int]]

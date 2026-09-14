@@ -8,16 +8,14 @@ import pygame
 
 from synth.controls import Knob
 from synth.lesson import Lesson
-from synth.patch import InputJack, OutputJack, SignalKind
+from synth.patch import InputJack, OutputJack
 
 
 WINDOW_WIDTH = 1_140
 WINDOW_HEIGHT = 650
-MODULE_WIDTH = 300
-MODULE_HEIGHT = 320
-MODULE_GAP = 70
-MODULE_TOP = 130
-MODULE_COLUMNS = 3
+MODULE_WIDTH = 190
+MODULE_HEIGHT = 270
+BOARD_RECTANGLE = pygame.Rect(24, 108, WINDOW_WIDTH - 48, 412)
 SAMPLES_PER_VISIBLE_STEP = 10
 ANIMATION_DELAY_MILLISECONDS = 35
 
@@ -27,7 +25,10 @@ MUTED_INK = (74, 89, 96)
 MODULE_FILL = (220, 232, 231)
 MODULE_BORDER = (23, 47, 59)
 CABLE = (181, 74, 54)
-CONTROL_CABLE = (70, 112, 153)
+INPUT_JACK = (78, 94, 99)
+OUTPUT_JACK = (37, 68, 79)
+BOARD_FILL = (234, 226, 211)
+BOARD_BORDER = (171, 154, 130)
 BUTTON_FILL = (232, 221, 200)
 BUTTON_ACTIVE_FILL = (213, 231, 215)
 
@@ -52,11 +53,9 @@ class BoardView:
         pygame.init()
         pygame.display.set_caption(f"Synth Board: Lesson {lesson.number}")
         self.lesson = lesson
-        control_counts = [len(self.controls(module)) for module in lesson.panel_modules]
-        self.module_height = max(MODULE_HEIGHT, 220 + 58 * max(control_counts, default=0) + 30)
-        self.module_rows = (len(lesson.panel_modules) + MODULE_COLUMNS - 1) // MODULE_COLUMNS
-        self.footer_top = MODULE_TOP + self.module_rows * (self.module_height + 35)
-        self.window_height = max(WINDOW_HEIGHT, self.footer_top + 80)
+        self.module_height = MODULE_HEIGHT
+        self.footer_top = 554
+        self.window_height = WINDOW_HEIGHT
         self.screen = pygame.display.set_mode((WINDOW_WIDTH, self.window_height))
         self.clock = pygame.time.Clock()
         self.last_sample = 0.0
@@ -132,6 +131,8 @@ class BoardView:
         self.jack_positions = {}
         self.knob_areas = []
         self.draw_title()
+        pygame.draw.rect(self.screen, BOARD_FILL, BOARD_RECTANGLE, border_radius=8)
+        pygame.draw.rect(self.screen, BOARD_BORDER, BOARD_RECTANGLE, width=2, border_radius=8)
         for index, module in enumerate(self.lesson.panel_modules):
             self.draw_module(module, index)
         self.draw_cables()
@@ -158,10 +159,7 @@ class BoardView:
 
     def draw_module(self, module: object, index: int) -> None:
         """Draw one mounted module from its jacks and exposed front-panel controls."""
-        column = index % MODULE_COLUMNS
-        row = index // MODULE_COLUMNS
-        left = 40 + column * (MODULE_WIDTH + MODULE_GAP)
-        top = MODULE_TOP + row * (self.module_height + 35)
+        left, top = self.lesson.panel_positions[index]
         rectangle = pygame.Rect(left, top, MODULE_WIDTH, self.module_height)
         heading_font = pygame.font.SysFont("Helvetica", 18, bold=True)
         body_font = pygame.font.SysFont("Helvetica", 15)
@@ -198,8 +196,7 @@ class BoardView:
 
     def draw_jack(self, jack: Union[InputJack, OutputJack], position: tuple[int, int]) -> None:
         """Draw one jack and remember its location for the corresponding patch cable."""
-        signal_kind = jack.signal_kind if isinstance(jack, OutputJack) else jack.accepted_kinds[0]
-        color = self.signal_color(signal_kind)
+        color = OUTPUT_JACK if isinstance(jack, OutputJack) else INPUT_JACK
         pygame.draw.circle(self.screen, color, position, 12)
         pygame.draw.circle(self.screen, BACKGROUND, position, 6)
         self.jack_positions[id(jack)] = position
@@ -214,7 +211,7 @@ class BoardView:
         pygame.draw.rect(self.screen, MUTED_INK, track, border_radius=3)
         fraction = (knob.value - knob.minimum) / (knob.maximum - knob.minimum)
         knob_x = round(track.left + fraction * track.width)
-        pygame.draw.circle(self.screen, CONTROL_CABLE, (knob_x, track.centery), 9)
+        pygame.draw.circle(self.screen, OUTPUT_JACK, (knob_x, track.centery), 9)
         self.knob_areas.append((track, knob))
 
     def draw_cables(self) -> None:
@@ -222,8 +219,7 @@ class BoardView:
         for cable in self.lesson.board.cables:
             source = self.jack_positions[id(cable.source)]
             destination = self.jack_positions[id(cable.destination)]
-            color = self.signal_color(cable.source.signal_kind)
-            pygame.draw.line(self.screen, color, source, destination, width=4)
+            pygame.draw.line(self.screen, CABLE, source, destination, width=4)
 
     def draw_footer(self) -> None:
         """Draw controls that advance the board's shared sample clock."""
@@ -256,10 +252,6 @@ class BoardView:
     def controls(self, module: object) -> list[Knob]:
         """Return the controls that one module asks the generic viewer to draw."""
         return module.controls()
-
-    def signal_color(self, signal_kind: SignalKind) -> tuple[int, int, int]:
-        """Return the display color assigned to one declared voltage role."""
-        return CONTROL_CABLE if signal_kind is SignalKind.CONTROL else CABLE
 
     def draw_text(
         self, text: str, font: pygame.font.Font, color: tuple[int, int, int], position: tuple[int, int]

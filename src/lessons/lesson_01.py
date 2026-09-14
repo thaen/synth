@@ -10,7 +10,7 @@ SAMPLE_RATE = 44_100
 
 
 def mount_base_board() -> tuple[Board, SineOscillator, AudioOutput]:
-    """Mount the fixed A4 oscillator and audio output with their audio cable."""
+    """Mount the fixed A4 oscillator and audio output with one patch cable."""
     oscillator = SineOscillator(base_frequency_hz=440.0, sample_rate=SAMPLE_RATE)
     audio_output = AudioOutput()
     board = Board()
@@ -30,4 +30,5 @@ def build() -> Lesson:
         board,
         SAMPLE_RATE,
         [oscillator, audio_output],
+        [(190, 190), (760, 190)],
     )

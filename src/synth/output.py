@@ -1,17 +1,17 @@
 """This module models the board's connection to a speaker or audio device."""
 
 from synth.controls import Knob
-from synth.patch import InputJack, OutputJack, SignalKind
+from synth.patch import InputJack, OutputJack, VoltageRole
 
 
 class AudioOutput:
-    """This module receives audio voltage and presents a monitored output voltage."""
+    """This module interprets its input voltage as audio and presents a monitored output."""
 
     display_name = "AUDIO OUTPUT"
 
     def __init__(self) -> None:
         """Create the audio output with one input jack and one monitor-level knob."""
-        self.audio_input = InputJack("Audio input", (SignalKind.AUDIO,))
+        self.audio_input = InputJack("Audio input", VoltageRole.AUDIO)
         self.monitor_level = Knob("Monitor level", 0.0, 1.0, 0.25, "")
 
     def advance(self) -> None:

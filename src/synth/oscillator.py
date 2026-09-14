@@ -2,7 +2,7 @@
 
 from math import pi, sin
 
-from synth.patch import InputJack, OutputJack, SignalKind
+from synth.patch import InputJack, OutputJack, VoltageRole
 
 
 class SineOscillator:
@@ -20,8 +20,8 @@ class SineOscillator:
         self.base_frequency_hz = base_frequency_hz
         self.sample_rate = sample_rate
         self.phase_cycles = 0.0
-        self.pitch_input = InputJack("Pitch input", (SignalKind.CONTROL,), visible=False)
-        self.sine_output = OutputJack("Sine output", SignalKind.AUDIO)
+        self.pitch_input = InputJack("Pitch input", VoltageRole.CONTROL, visible=False)
+        self.sine_output = OutputJack("Sine output", VoltageRole.AUDIO)
 
     @property
     def frequency_hz(self) -> float:

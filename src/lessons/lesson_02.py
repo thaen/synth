@@ -14,8 +14,9 @@ def build() -> Lesson:
     oscillator.pitch_input.visible = True
     return Lesson(
         2,
-        "Pitch control patched to a sine oscillator and audio output",
+        "Pitch control drives a sine oscillator",
         board,
         SAMPLE_RATE,
         [pitch_control, oscillator, audio_output],
+        [(80, 190), (460, 190), (840, 190)],
     )

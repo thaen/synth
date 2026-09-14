@@ -4,12 +4,12 @@ The first board produces a steady A4 tone, which repeats 440 times each second. 
 
 An instrument board is a surface that holds electronic parts. Each part is a module. A module has connection points called jacks, and a patch cable plugs an output jack into an input jack.
 
-The first board has a sine oscillator, an audio-output module, and one audio cable.
+The first board has a sine oscillator, an audio-output module, and one patch cable.
 
 ```text
-+---------------------------+       audio cable       +---------------------------+
++---------------------------+       patch cable       +---------------------------+
 | SINE OSCILLATOR           |------------------------>| AUDIO OUTPUT              |
-| Base frequency: 440 Hz    |      audio voltage      | Audio input               |
+| Base frequency: 440 Hz    |   changing voltage      | Audio input               |
 | Sine output jack          |                         | Monitor level: 0.25       |
 +---------------------------+                         +---------------------------+
 ```
@@ -22,14 +22,16 @@ The oscillator's base frequency is 440 Hz, so it makes 440 cycles each second. I
 
 The board has 44,100 sample times each second. The audio adapter converts the resulting stream of numbers to an electrical signal, and a speaker converts that changing electrical signal to motion and air pressure.
 
-## The Cable Carries Audio Voltage.
+## The Cable Carries Voltage Between the Modules.
 
-The cable plugs from the oscillator's `Sine output` jack to the audio-output module's `Audio input` jack. The cable carries audio voltage because this voltage becomes the sound heard at the end of the signal path.
+The cable plugs from the oscillator's `Sine output` jack to the audio-output module's `Audio input` jack. A physical patch cable is a conductor. It does not determine the meaning of the voltage that it carries.
 
-The audio-output module has a monitor-level control set to 0.25. It multiplies the incoming audio voltage by 0.25 before the audio adapter receives it. That visible control keeps the first tone at a restrained level.
+The oscillator makes a voltage that changes at an audio rate. The audio-output module interprets the voltage at its input as a signal to send toward the audio adapter. Those module roles make this cable part of an audio path.
+
+The audio-output module has a monitor-level control set to 0.25. It multiplies the incoming voltage by 0.25 before the audio adapter receives it. That visible control keeps the first tone at a restrained level.
 
 ```text
-oscillator output voltage → audio cable → audio-output voltage → audio adapter → speaker
+oscillator output voltage → patch cable → audio-output voltage → audio adapter → speaker
 ```
 
 ## The Code Follows the Board.
@@ -49,7 +51,7 @@ python3 -m pip install --user -r requirements.txt
 python3 src/view.py --lesson 1
 ```
 
-The viewer shows the first board's two modules and one audio cable. The Run control advances the complete board in groups of ten samples, and the audio-output voltage display shows the voltage currently arriving through the cable.
+The viewer shows the first board's two modules and one patch cable on a board with open space around them. The Run control advances the complete board in groups of ten samples, and the audio-output voltage display shows the voltage currently arriving through the cable.
 
 ## You Can Hear the First Board.
 
@@ -61,4 +63,4 @@ python3 src/lesson_01_tone.py
 
 The program loads the same Lesson 1 configuration, requests 132,300 samples from its board, writes three seconds of A4 to `output/lesson-01-a4.wav`, and plays the file through the selected macOS sound device.
 
-The next lesson adds a pitch-control module and one control-voltage cable to this board.
+The next lesson adds a pitch-control module and one patch cable to this board.

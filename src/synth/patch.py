@@ -3,8 +3,8 @@
 from enum import Enum
 
 
-class SignalKind(Enum):
-    """This enumeration names the intended role of voltage on a jack."""
+class VoltageRole(Enum):
+    """This enumeration names the role that a module assigns to a jack's voltage."""
 
     AUDIO = "audio"
     CONTROL = "control"
@@ -14,10 +14,10 @@ class SignalKind(Enum):
 class OutputJack:
     """This jack holds the voltage that a module sends through a cable."""
 
-    def __init__(self, name: str, signal_kind: SignalKind) -> None:
-        """Create a named output jack with a voltage role and zero volts at first."""
+    def __init__(self, name: str, voltage_role: VoltageRole) -> None:
+        """Create a named output jack with a role and zero volts at first."""
         self.name = name
-        self.signal_kind = signal_kind
+        self.voltage_role = voltage_role
         self.voltage = 0.0
         self.owner: object | None = None
 
@@ -26,11 +26,11 @@ class InputJack:
     """This jack reads voltage from the cable plugged into it."""
 
     def __init__(
-        self, name: str, accepted_kinds: tuple[SignalKind, ...], visible: bool = True
+        self, name: str, voltage_role: VoltageRole, visible: bool = True
     ) -> None:
-        """Create a named input jack with accepted voltage roles and no cable."""
+        """Create a named input jack with its module's intended role and no cable."""
         self.name = name
-        self.accepted_kinds = accepted_kinds
+        self.voltage_role = voltage_role
         self.visible = visible
         self.cable: PatchCable | None = None
         self.owner: object | None = None
@@ -49,10 +49,6 @@ class PatchCable:
         """Plug the source output into the destination input."""
         if destination.cable is not None:
             raise ValueError(f"The {destination.name} input already has a cable.")
-        if source.signal_kind not in destination.accepted_kinds:
-            raise ValueError(
-                f"The {destination.name} input does not accept {source.signal_kind.value} voltage."
-            )
         self.source = source
         self.destination = destination
         destination.cable = self

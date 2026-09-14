@@ -1,7 +1,7 @@
 """This module models a front-panel control that produces pitch voltage."""
 
 from synth.controls import Knob
-from synth.patch import OutputJack, SignalKind
+from synth.patch import OutputJack, VoltageRole
 
 
 class PitchControl:
@@ -12,7 +12,7 @@ class PitchControl:
     def __init__(self, pitch_volts: float = 0.0) -> None:
         """Create a pitch control centered at zero volts, which represents A4."""
         self.pitch_knob = Knob("Pitch", -2.0, 2.0, pitch_volts, "V")
-        self.pitch_output = OutputJack("Pitch output", SignalKind.CONTROL)
+        self.pitch_output = OutputJack("Pitch output", VoltageRole.CONTROL)
 
     def advance(self) -> None:
         """Place the knob's pitch voltage on the output jack."""
