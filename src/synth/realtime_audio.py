@@ -224,6 +224,7 @@ class SoundDeviceAudioAdapter:
         """Mute, stop, and close the stream so reset and quit leave no callback running."""
         with self._lock:
             self._active = False
+            self._gain = 0.0
             self._target_gain = 0.0
             stream = self._stream
             self._stream = None

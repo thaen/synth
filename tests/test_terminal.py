@@ -1,11 +1,12 @@
 """These tests protect the generic terminal lesson state and audio seam."""
 
+import math
 import unittest
 
 from lessons.lesson_01 import build as build_lesson_01
 from lessons.lesson_02 import build as build_lesson_02
 from synth.realtime_audio import DeterministicAudioCollector, SoundDeviceAudioAdapter
-from synth.terminal import TerminalLessonState
+from synth.terminal import TerminalLessonApp, TerminalLessonState
 
 
 class TerminalLessonStateTests(unittest.TestCase):
@@ -57,6 +58,113 @@ class TerminalLessonStateTests(unittest.TestCase):
         self.assertEqual(lesson.visible_panels[0].visible_controls[0].control.value, 0.0)
         state.dispatch("q")
         self.assertFalse(state.is_open)
+
+    def test_lesson_one_declares_its_panels_and_inactive_states(self) -> None:
+        """Lesson 1 supplies panel text and states without terminal lesson branches."""
+        state = TerminalLessonState(build_lesson_01(), DeterministicAudioCollector())
+
+        source, output = state.lesson.visible_panels
+
+        self.assertEqual(source.label, "Sine Wave Creator")
+        self.assertEqual(source.format_readout(), "Frequency  440 Hz")
+        self.assertEqual(state.panel_state(source), "idle")
+        self.assertEqual(output.label, "Audio Output")
+        self.assertEqual(output.format_readout(), "To system sound")
+        self.assertEqual(state.panel_state(output), "silent")
+
+    def test_lesson_one_latch_emits_a_deterministic_440_hz_signal(self) -> None:
+        """The b command starts A4, and its next press mutes collection without a device."""
+        lesson = build_lesson_01()
+        collector = DeterministicAudioCollector()
+        state = TerminalLessonState(lesson, collector)
+
+        state.dispatch("b")
+        samples = collector.collect(256)
+
+        expected = [
+            0.25 * math.sin(2 * math.pi * index * 440.0 / lesson.sample_rate)
+            for index in range(256)
+        ]
+        self.assertTrue(collector.is_active)
+        self.assertEqual(state.panel_state(lesson.visible_panels[0]), "active")
+        self.assertEqual(state.panel_state(lesson.visible_panels[1]), "active")
+        for sample, expected_sample in zip(samples, expected):
+            self.assertAlmostEqual(sample, expected_sample, places=12)
+        self.assertIn("440 Hz is active", state.status_message)
+
+        state.dispatch("b")
+
+        self.assertFalse(collector.is_active)
+        self.assertEqual(state.panel_state(lesson.visible_panels[0]), "idle")
+        self.assertEqual(state.panel_state(lesson.visible_panels[1]), "silent")
+        self.assertEqual(collector.collect(8), [0.0] * 8)
+        self.assertIn("440 Hz is silent", state.status_message)
+
+    def test_lesson_one_reset_stops_audio_and_returns_to_its_starting_state(self) -> None:
+        """The reset command restores the selected source and the first A4 sample."""
+        lesson = build_lesson_01()
+        collector = DeterministicAudioCollector()
+        state = TerminalLessonState(lesson, collector)
+        state.dispatch("right")
+        state.dispatch("?")
+        state.dispatch("b")
+        collector.collect(64)
+
+        state.dispatch("r")
+
+        self.assertFalse(collector.is_active)
+        self.assertFalse(state.help_is_visible)
+        self.assertEqual(state.selected_panel.label, "Sine Wave Creator")
+        self.assertEqual(collector.collect(4), [0.0] * 4)
+        state.dispatch("b")
+        self.assertEqual(collector.collect(1), [0.0])
+
+    def test_lesson_one_cable_pulse_moves_only_while_the_latch_is_active(self) -> None:
+        """The generic renderer changes the configured cable from a still rail to a moving pulse."""
+        class RecordingScreen:
+            """This replacement records terminal output without a terminal emulator."""
+
+            def __init__(self) -> None:
+                self.calls: list[tuple[int, int, str]] = []
+
+            def getmaxyx(self) -> tuple[int, int]:
+                return (20, 80)
+
+            def erase(self) -> None:
+                self.calls = []
+
+            def addnstr(
+                self, row: int, column: int, text: str, count: int, _attribute: int
+            ) -> None:
+                self.calls.append((row, column, text[:count]))
+
+            def refresh(self) -> None:
+                return None
+
+        state = TerminalLessonState(build_lesson_01(), DeterministicAudioCollector())
+        app = TerminalLessonApp(state)
+        screen = RecordingScreen()
+
+        app.pulse_frame = 3
+        app._draw(screen)
+        inactive_cable = next(
+            text for row, _column, text in screen.calls if row == 6 and set(text) == {"-"}
+        )
+        self.assertGreater(len(inactive_cable), 0)
+
+        state.dispatch("b")
+        app._draw(screen)
+        first_active_cable = next(
+            text for row, _column, text in screen.calls if row == 6 and ">" in text
+        )
+        self.assertEqual(first_active_cable.count(">"), 1)
+
+        app.pulse_frame = 4
+        app._draw(screen)
+        second_active_cable = next(
+            text for row, _column, text in screen.calls if row == 6 and ">" in text
+        )
+        self.assertNotEqual(first_active_cable, second_active_cable)
 
 
 class AudioAdapterTests(unittest.TestCase):
@@ -145,6 +253,7 @@ class AudioAdapterTests(unittest.TestCase):
         self.assertTrue(stream.started)
         self.assertTrue(stream.stopped)
         self.assertTrue(stream.closed)
+        self.assertEqual(adapter._gain, 0.0)
 
 
 if __name__ == "__main__":
