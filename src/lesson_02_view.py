@@ -15,6 +15,7 @@ GRAPH_TOP = 85
 GRAPH_WIDTH = 460
 GRAPH_HEIGHT = 300
 ANIMATION_DELAY_MILLISECONDS = 35
+SAMPLES_PER_VISIBLE_STEP = 10
 
 
 class OscillatorView:
@@ -55,7 +56,7 @@ class OscillatorView:
 
         self.run_button = tk.Button(root, text="Run", width=10, command=self.toggle_run)
         self.run_button.grid(row=1, column=2, padx=6, pady=8)
-        tk.Button(root, text="Step one sample", width=16, command=self.step).grid(
+        tk.Button(root, text="Request 10 samples", width=18, command=self.step).grid(
             row=1, column=3, padx=(6, 18), pady=8
         )
         tk.Button(root, text="Reset phase", width=14, command=self.reset).grid(
@@ -63,7 +64,7 @@ class OscillatorView:
         )
         tk.Label(
             root,
-            text="The display advances one audio sample per visible step, so phase is easy to see.",
+            text="Each visible step requests 10 audio samples, so phase motion is easy to see.",
         ).grid(row=2, column=2, columnspan=2, padx=(6, 18), pady=(0, 18))
 
         self.draw()
@@ -74,8 +75,9 @@ class OscillatorView:
         self.draw()
 
     def step(self) -> None:
-        """Request one sample from the oscillator and redraw the window."""
-        self.last_sample = self.oscillator.next_sample()
+        """Request enough samples to make the phase change visible."""
+        for _ in range(SAMPLES_PER_VISIBLE_STEP):
+            self.last_sample = self.oscillator.next_sample()
         self.draw()
 
     def reset(self) -> None:
@@ -92,7 +94,7 @@ class OscillatorView:
             self.animate()
 
     def animate(self) -> None:
-        """Advance the oscillator once and schedule the next visible step."""
+        """Advance the oscillator visibly and schedule the next visible step."""
         if not self.is_running:
             return
         self.step()
@@ -127,7 +129,7 @@ class OscillatorView:
 
     def draw_module(self) -> None:
         """Draw the oscillator as a physical instrument part."""
-        left, top, right, bottom = 35, 120, 330, 405
+        left, top, right, bottom = 35, 120, 330, 450
         self.canvas.create_rectangle(
             left, top, right, bottom, fill="#dce8e7", outline="#172f3b", width=2
         )
@@ -141,12 +143,14 @@ class OscillatorView:
         self.canvas.create_line(left + 18, top + 58, right - 18, top + 58, fill="#7d9292")
 
         phase_step = self.oscillator.frequency_hz / self.oscillator.sample_rate
+        visible_step = SAMPLES_PER_VISIBLE_STEP * phase_step
         rows = [
             ("INPUT", f"frequency: {self.oscillator.frequency_hz:.0f} Hz"),
             ("INPUT", f"sample rate: {self.oscillator.sample_rate:,} per second"),
             ("STATE", f"phase: {self.oscillator.phase_cycles:.5f} cycles"),
             ("OUTPUT", f"last sample: {self.last_sample:+.5f}"),
             ("STEP", f"phase advance: {phase_step:.5f} cycles"),
+            ("VIEW", f"10 requests advance: {visible_step:.5f} cycles"),
         ]
         y = top + 84
         for label, value in rows:
@@ -171,7 +175,7 @@ class OscillatorView:
         )
 
     def draw_waveform(self) -> None:
-        """Draw two cycles of the sine-wave pattern and the current phase marker."""
+        """Draw one sine-wave cycle and the current phase marker."""
         left, top = GRAPH_LEFT, GRAPH_TOP
         right, bottom = left + GRAPH_WIDTH, top + GRAPH_HEIGHT
         center_y = (top + bottom) / 2

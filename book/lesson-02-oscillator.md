@@ -96,6 +96,6 @@ Run this command from the project directory:
 python3 src/lesson_02_view.py
 ```
 
-The window shows the oscillator module, its input values, its current phase, its most recent sample, and the waveform that those samples follow. The Run button advances the oscillator one audio sample at a time at a visible speed. The Step button advances it once, and the Reset button returns phase to the start of the cycle.
+The window shows the oscillator module, its input values, its current phase, its most recent sample, and the waveform that those samples follow. The Run button requests ten audio samples at a visible speed. The Request 10 Samples button makes one visible step, and the Reset button returns phase to the start of the cycle.
 
 The next lesson will give musicians a way to name these frequencies without changing the oscillator itself.
