@@ -1,11 +1,9 @@
 """Show the state and output of the Lesson 2 sine oscillator with Pygame."""
 
 from dataclasses import dataclass
-from math import pi, sin
-
 import pygame
 
-from synth.oscillator import SineOscillator
+from synth.first_board import make_first_board
 
 
 SAMPLE_RATE = 44_100
@@ -51,7 +49,9 @@ class OscillatorView:
         self.body_font = pygame.font.SysFont("Helvetica", 15)
         self.small_font = pygame.font.SysFont("Helvetica", 12)
 
-        self.oscillator = SineOscillator(DEFAULT_FREQUENCY_HZ, SAMPLE_RATE)
+        self.instrument = make_first_board(DEFAULT_FREQUENCY_HZ, SAMPLE_RATE)
+        self.oscillator = self.instrument.oscillator
+        self.speaker = self.instrument.speaker
         self.last_sample = 0.0
         self.is_running = False
         self.is_open = True
@@ -113,21 +113,21 @@ class OscillatorView:
         self.oscillator.frequency_hz = round(frequency)
 
     def advance_visible_step(self) -> None:
-        """Request enough samples to make phase movement easy to see."""
+        """Advance the mounted board enough to make phase movement easy to see."""
         for _ in range(SAMPLES_PER_VISIBLE_STEP):
-            self.last_sample = self.oscillator.next_sample()
+            self.last_sample = self.instrument.next_sample()
 
     def slider_hitbox(self) -> pygame.Rect:
         """Return a generous clickable region around the frequency slider."""
         return self.slider_track.inflate(0, 32)
 
     def draw(self) -> None:
-        """Draw the oscillator, its signal connection, and the waveform."""
+        """Draw the mounted board and its patch cable."""
         self.screen.fill(BACKGROUND)
         self.draw_title()
         self.draw_module()
         self.draw_connection()
-        self.draw_waveform()
+        self.draw_speaker()
         self.draw_frequency_control()
         self.draw_buttons()
         pygame.display.flip()
@@ -135,13 +135,13 @@ class OscillatorView:
     def draw_title(self) -> None:
         """Draw the title and the meaning of the phase marker."""
         self.draw_text(
-            "A sine oscillator makes one new sample whenever it receives a request.",
+            "The first board sends a sine-wave voltage through one patch cable.",
             self.title_font,
             INK,
             (30, 25),
         )
         self.draw_text(
-            "The dot marks the oscillator's present position in one waveform cycle.",
+            "The board advances once per sample, and the speaker reads the cable's voltage.",
             self.body_font,
             MUTED_INK,
             (30, 56),
@@ -172,38 +172,37 @@ class OscillatorView:
             y += 37
 
     def draw_connection(self) -> None:
-        """Draw the path from the oscillator output to the waveform display."""
+        """Draw the physical-style cable from the oscillator to the speaker module."""
         start, end, y = 385, 440, 276
         pygame.draw.line(self.screen, SIGNAL, (start, y), (end, y), width=4)
         pygame.draw.polygon(self.screen, SIGNAL, [(end, y), (end - 12, y - 7), (end - 12, y + 7)])
-        self.draw_text("one sample", self.small_font, SIGNAL_DARK, (390, 246))
+        self.draw_text("patch cable", self.small_font, SIGNAL_DARK, (390, 246))
+        self.draw_text("audio voltage", self.small_font, SIGNAL_DARK, (390, 262))
 
-    def draw_waveform(self) -> None:
-        """Draw one sine-wave cycle and the marker for the current phase."""
+    def draw_speaker(self) -> None:
+        """Draw the physical-style output module that reads the patch cable."""
         left, top, width, height = 455, 116, 420, 320
-        center_y = top + height / 2
-        amplitude = height * 0.36
         rectangle = pygame.Rect(left, top, width, height)
 
-        self.draw_text("The waveform that the oscillator follows", self.heading_font, INK, (left, 87))
-        pygame.draw.rect(self.screen, BACKGROUND, rectangle)
-        pygame.draw.rect(self.screen, MUTED_INK, rectangle, width=1)
-        pygame.draw.line(self.screen, GRID, (left, center_y), (left + width, center_y), width=1)
-
-        points = []
-        for pixel in range(width + 1):
-            phase = pixel / width
-            x = left + pixel
-            y = center_y - amplitude * sin(2 * pi * phase)
-            points.append((x, y))
-        pygame.draw.lines(self.screen, SIGNAL, False, points, width=3)
-
-        marker_x = left + self.oscillator.phase_cycles * width
-        marker_y = center_y - amplitude * sin(2 * pi * self.oscillator.phase_cycles)
-        pygame.draw.line(self.screen, INK, (marker_x, top), (marker_x, top + height), width=1)
-        pygame.draw.circle(self.screen, INK, (round(marker_x), round(marker_y)), 8)
-        pygame.draw.circle(self.screen, BACKGROUND, (round(marker_x), round(marker_y)), 5)
-        self.draw_text("one complete waveform cycle", self.small_font, MUTED_INK, (575, 448))
+        pygame.draw.rect(self.screen, MODULE_FILL, rectangle)
+        pygame.draw.rect(self.screen, MODULE_BORDER, rectangle, width=2)
+        self.draw_text("SPEAKER OUTPUT", self.heading_font, INK, (480, 141))
+        pygame.draw.line(self.screen, MUTED_INK, (475, 174), (850, 174), width=1)
+        input_x, input_y = left, 276
+        pygame.draw.circle(self.screen, SIGNAL_DARK, (input_x, input_y), 13)
+        pygame.draw.circle(self.screen, BACKGROUND, (input_x, input_y), 7)
+        self.draw_text("Audio input jack", self.body_font, INK, (480, 248))
+        self.draw_text(
+            f"incoming voltage: {self.speaker.current_sample():+.5f}",
+            self.body_font,
+            INK,
+            (480, 278),
+        )
+        self.draw_text("speaker", self.heading_font, INK, (690, 222))
+        pygame.draw.circle(self.screen, INK, (745, 290), 72, width=3)
+        pygame.draw.circle(self.screen, SIGNAL, (745, 290), 32)
+        pygame.draw.line(self.screen, INK, (710, 250), (780, 330), width=3)
+        self.draw_text("The output adapter sends this voltage stream to macOS.", self.small_font, MUTED_INK, (480, 391))
 
     def draw_frequency_control(self) -> None:
         """Draw the slider that changes the oscillator's frequency input."""

@@ -1,102 +1,55 @@
-# Lesson 2 Builds a Repeating Sound Source.
+# Lesson 2 Makes the Oscillator's Frequency Setting Visible.
 
-Lesson 1 made one tone by calculating every number in advance. The program knew that it needed three seconds of A4, calculated all 132,300 sample values, saved them in a file, and played the file. This lesson focuses on the repeating source that makes those sample values.
-
-This lesson changes one part of the first program. Instead of asking, "What is sample number 57?", the program keeps track of a repeating wave and answers a different question repeatedly: "What sample comes next?"
-
-## A Sound Source Repeats a Pattern.
-
-A sound source is anything that produces sound. In this program, a sound source is code that produces a sequence of numbers for a speaker over time. A sine wave is one particular sequence. Its values rise smoothly from zero to a positive peak, return to zero, fall to a negative peak, and return to zero. That complete rise and fall is one cycle. The shape made by the values during a cycle is called a waveform.
-
-For a sine wave at 440 hertz, the cycle happens 440 times each second. The same pattern repeats, but the program must remember where it is in the current cycle. The position within one cycle is called phase.
-
-Imagine a much slower wave that has four sample positions in each cycle. Its positions could look like this:
+Lesson 2 keeps the first board's two modules and its one patch cable. The board still has one sine oscillator connected directly to one speaker-output module. This lesson focuses on the oscillator's frequency setting, which determines how quickly its voltage repeats.
 
 ```text
-phase in the cycle:   start   one quarter   halfway   three quarters   start again
-sample value:           0          1           0          -1             0
++---------------------------+       patch cable       +---------------------------+
+| SINE OSCILLATOR           |------------------------>| SPEAKER OUTPUT            |
+| Frequency: 440 Hz         |      audio voltage      | Audio input               |
+| Sine output jack          |                         | Speaker                   |
++---------------------------+                         +---------------------------+
 ```
 
-Each request for a sample moves the wave forward by one position. A real 440 Hz sine wave has many more positions than this example, but it follows the same rule: use the current position, then move forward a small amount.
+The cable carries audio voltage. The frequency setting is a front-panel setting on the oscillator itself. It changes the voltage made by the oscillator before that voltage enters the cable.
 
-## A Module Is One Small Part with One Job.
+## A Sine Oscillator Repeats One Shape.
 
-An electronic synthesizer has separate physical parts. One part creates a repeating electrical signal. Another part changes its level. Another part can remove some of its high-frequency content. Musicians connect these parts with cables.
+A sine wave rises smoothly from zero to a positive peak, returns to zero, falls to a negative peak, and returns to zero. One complete rise and fall is a cycle. The shape made during one cycle is called a waveform.
 
-The program uses the word *module* for one small, named part that has one job and a clear connection to other parts. The `SineOscillator` module makes the next value of a sine wave. Its connection is the `next_sample()` operation: another part asks for one value, and the oscillator supplies it.
-
-This separation keeps the connection simple. Code that needs a sound value asks for the next sample. The oscillator handles the phase calculation needed to supply that value.
+The frequency tells the oscillator how many cycles to make each second. A 440 Hz setting makes 440 cycles in one second. A 220 Hz setting makes 220 cycles in one second, so its tone is one octave lower. An 880 Hz setting makes 880 cycles in one second, so its tone is one octave higher.
 
 ## The Oscillator Remembers Its Position.
 
-The `SineOscillator` code has three stored pieces of information.
+The oscillator must remember where it is in the current cycle between sample times. That remembered position is called phase. A phase of `0.0` is the start of the cycle. A phase of `0.5` is halfway through the cycle. After a phase reaches one complete cycle, it returns to `0.0`.
 
-`frequency_hz` is the number of cycles per second. The lesson uses 440.0, which is A4.
-
-`sample_rate` is the number of samples made per second. The lesson uses 44,100.
-
-`phase_cycles` is the current position in the waveform. A phase of `0.0` means the start of a cycle. A phase of `0.5` means halfway through it. A phase of `1.0` means the next cycle has begun, so the program wraps it back to `0.0`.
-
-For every sample, the oscillator advances phase by this amount:
+The board uses 44,100 sample times each second. At a frequency of 440 Hz, the oscillator moves forward by this fraction of a cycle for every sample:
 
 ```text
-frequency / sample rate
+440 / 44100 = 0.00998 cycles per sample
 ```
 
-At 440 Hz and 44,100 samples per second, the amount is `440 / 44100`, or about 0.00998 of a cycle. The oscillator turns its present phase into a sine-wave value, adds that amount to the phase, wraps around after one whole cycle, and waits for the next request.
+The `SineOscillator.advance()` operation places the voltage for its current phase on the sine-output jack, then advances phase by that amount. The cable always carries the voltage currently on its source jack.
 
-## The Program Uses the Oscillator One Sample at a Time.
+## The Board Has a Physical-Style Code Model.
 
-The important line in [the audio program](../src/lesson_02_oscillator.py) is:
-
-```python
-oscillator.next_sample()
-```
-
-That line asks the oscillator for one number. The lesson calls it 132,300 times because three seconds at 44,100 samples per second require 132,300 numbers.
-
-The oscillator produces values from `-1.0` to `1.0`. The lesson program multiplies each value by `MONITOR_LEVEL`, which is 0.25, before it sends the values to the output code. This keeps playback at a restrained level.
-
-## The Laboratory Shows the Same Oscillator in Slow Motion.
-
-The [visual laboratory](../src/lesson_02_view.py) imports the same [SineOscillator code](../src/synth/oscillator.py) as the audio program. The two programs differ only in what they do after they ask the oscillator for samples.
+The [oscillator code](../src/synth/oscillator.py) has a `sine_output` jack. The [speaker-output code](../src/synth/output.py) has an `audio_input` jack. The [patch code](../src/synth/patch.py) connects those two jacks with a `PatchCable`. The [board code](../src/synth/board.py) advances the mounted modules and reads the voltage at the speaker module.
 
 ```text
-                         SineOscillator
-                                |
-                 next_sample() returns one value
-                         /                  \
-                        v                    v
-                audio program          visual laboratory
-          requests 132,300 values      requests 10 values
-          writes a WAV file             displays phase and sample value
-          plays the tone                moves the dot on the waveform
+SineOscillator.advance()
+        |
+        v
+Sine output jack holds the current voltage
+        |
+        v
+PatchCable carries that voltage
+        |
+        v
+Speaker output reads its Audio input jack
 ```
 
-The laboratory gives the phase movement a human-visible pace. Its Run button repeatedly makes groups of ten `next_sample()` requests. Its Request 10 Samples button makes one group of ten requests. The dot marks the oscillator's phase after those requests, and the value in the oscillator panel is the most recently returned sample.
+The audio program and the board display use the same mounted-board setup from [first_board.py](../src/synth/first_board.py). The audio program asks the board for 132,300 samples and plays them. The board display advances the same board in groups of ten samples so its phase movement is visible.
 
-## You Can Read the Complete Signal Path.
-
-```text
-SineOscillator
-    makes one new sample when asked
-            |
-            v
-lesson program
-    asks for 132,300 samples and applies a fixed monitoring level
-            |
-            v
-audio output code
-    writes the samples to a WAV file and asks macOS to play it
-            |
-            v
-speaker
-    moves back and forth and makes a 440 Hz tone
-```
-
-The audio output code moves completed samples to the Mac's sound device. The oscillator supplies the values that begin the signal path.
-
-## You Can Hear the Oscillator.
+## You Can Hear the Board at Different Frequencies.
 
 Run this command from the project directory:
 
@@ -104,17 +57,17 @@ Run this command from the project directory:
 python3 src/lesson_02_oscillator.py
 ```
 
-Change `FREQUENCY_HZ` from `440.0` to `220.0`, then run the program again. The waveform now repeats 220 times per second, so the sound is one octave lower. Change it to `880.0` for one octave higher.
+Change `FREQUENCY_HZ` in `src/lesson_02_oscillator.py` from `440.0` to `220.0`, then run the program again. The board retains the same modules and cable while the oscillator repeats more slowly.
 
-## You Can Watch the Same Oscillator Work.
+## You Can See the Mounted Board.
 
-Run this command from the project directory:
+Run these commands from the project directory:
 
 ```sh
 python3 -m pip install --user -r requirements.txt
 python3 src/lesson_02_view.py
 ```
 
-The window shows the oscillator module, its input values, its current phase, its most recent sample, and the waveform that those samples follow. The Run button requests ten audio samples at a visible speed. The Request 10 Samples button makes one visible step, and the Reset button returns phase to the start of the cycle. The sound program and the visual laboratory use the same oscillator class.
+The display shows the oscillator module, the speaker-output module, and the cable between their jacks. Its frequency control changes the oscillator setting. The Run control advances the board at a visible speed, Request 10 Samples advances it once, and Reset Phase returns the oscillator to the start of its cycle.
 
-The next lesson will give musicians a way to name these frequencies without changing the oscillator itself.
+The next lesson will add a musical pitch control to the same board.

@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from synth.audio_output import play_wav_file, write_mono_wav_file
-from synth.oscillator import SineOscillator
+from synth.first_board import make_first_board
 
 
 SAMPLE_RATE = 44_100
@@ -15,11 +15,11 @@ OUTPUT_PATH = PROJECT_DIRECTORY / "output" / "lesson-02-oscillator-a4.wav"
 
 
 def main() -> None:
-    """Create one oscillator, collect its samples, and play them."""
-    oscillator = SineOscillator(FREQUENCY_HZ, SAMPLE_RATE)
+    """Mount the first board, collect its samples, and play them."""
+    instrument = make_first_board(FREQUENCY_HZ, SAMPLE_RATE)
     number_of_samples = round(SAMPLE_RATE * DURATION_SECONDS)
     samples = (
-        MONITOR_LEVEL * oscillator.next_sample()
+        MONITOR_LEVEL * instrument.next_sample()
         for _ in range(number_of_samples)
     )
 

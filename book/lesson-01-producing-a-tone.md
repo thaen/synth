@@ -1,61 +1,68 @@
-# Lesson 1 Explains How a Program Produces a Tone.
+# Lesson 1 Mounts a Board That Makes One Tone.
 
-Sound is a change in air pressure over time. A speaker moves back and forth in response to a stream of numbers, which makes those pressure changes. A digital instrument begins by preparing that stream.
+An instrument board is a surface that holds the electronic parts of an instrument. A single part on that board is called a module. A module has connection points called jacks, and a cable plugs one jack into another.
 
-This lesson makes concert A, called A4, at 440 hertz. Hertz means cycles per second, so the speaker moves through 440 complete back-and-forth cycles each second. A tone at 40 Hz would be much lower; it is close to the low end of human hearing and is not the usual musical A reference.
+The first instrument board has two modules and one cable. A sine oscillator produces a repeating voltage, and a speaker-output module receives that voltage and sends it to the Mac's sound device.
 
-## The Primitive Is a Sine Wave.
-
-The program uses a sine wave. A sine wave has one smooth cycle, and it is the simplest useful model of a pure tone. Its sample value at time `t` is:
-
-```
-sample(t) = amplitude × sin(2π × frequency × t)
-```
-
-The frequency is 440. The amplitude is 0.25, which keeps the generated samples well below the format's largest value. The program uses a sample rate of 44,100 samples per second, so it evaluates the formula 44,100 times for every second of sound.
-
-For sample number `n`, the time is `n / 44100`. The first 3 seconds therefore have 132,300 samples. Each resulting decimal is scaled into a 16-bit signed integer, because the WAV file stores integers rather than Python decimal values.
-
-## The Signal Path Moves Samples to the Speaker.
-
-```
-frequency and duration
-          |
-          v
-sine-wave equation for each sample
-          |
-          v
-16-bit PCM values in a WAV file
-          |
-          v
-afplay and the selected macOS output device
-          |
-          v
-speaker motion and an audible 440 Hz tone
+```text
++---------------------------+       patch cable       +---------------------------+
+| SINE OSCILLATOR           |------------------------>| SPEAKER OUTPUT            |
+| Frequency: 440 Hz         |      audio voltage      | Audio input               |
+| Sine output jack          |                         | Speaker                   |
++---------------------------+                         +---------------------------+
 ```
 
-The WAV file is a container around the PCM values. PCM, or pulse-code modulation, is a direct list of speaker positions measured at fixed times. In this lesson there is one channel, so the same simple stream represents one mono sound source. The `synth.audio_output` module now holds WAV writing and macOS playback, so later lessons can focus on instrument modules.
+This board makes A4, the musical A at 440 Hz. A tone at 40 Hz would be much lower and would not be the usual A reference.
 
-## You Can Run the Program.
+## A Module Is a Physical Part of the Board.
 
-From the project directory, run:
+A module is one physical unit mounted on a synthesizer board. It has a particular job, front-panel controls, and connection points called jacks. The sine oscillator's job is to produce a voltage that follows the shape of a sine wave. The speaker-output module's job is to receive a voltage at its audio-input jack and pass it to a speaker.
+
+The program uses classes to represent those physical parts. `SineOscillator` represents the oscillator module. `SpeakerOutput` represents the speaker-output module. The code keeps the two modules separate for the same reason that the physical board keeps them separate: each part has one job and a visible connection.
+
+## A Cable Carries a Voltage.
+
+A patch cable plugs from an output jack on one module into an input jack on another module. The oscillator has a jack named `Sine output`. The speaker module has a jack named `Audio input`. The cable connects those two jacks.
+
+At every sample time, the oscillator places one number on its output jack. That number represents the voltage present on the physical output jack at that instant. The cable carries the number to the speaker module's input jack. The speaker module reads that number.
+
+The program uses 44,100 sample times each second. At a 440 Hz setting, the oscillator repeats its sine-wave cycle 440 times during one second.
+
+## The Board Runs on a Shared Clock.
+
+The board advances once for each sample. First, the oscillator places its next voltage on the sine-output jack. Then, the speaker module reads the cable connected to its audio-input jack. That voltage becomes the next value sent to the sound device.
+
+```text
+sample 1: oscillator output voltage → cable → speaker input voltage
+sample 2: oscillator output voltage → cable → speaker input voltage
+sample 3: oscillator output voltage → cable → speaker input voltage
+```
+
+The sound device receives 44,100 such values per second. It converts those values to an electrical signal, and its speaker converts the changing electrical signal into physical motion and then into changing air pressure.
+
+## The Program Mounts and Patches the Board.
+
+The code in `synth/first_board.py` assembles the first board in the same order that a person would assemble hardware: create the modules, mount them, and connect a cable.
+
+```python
+oscillator = SineOscillator(frequency_hz, sample_rate)
+speaker = SpeakerOutput()
+board = Board(speaker)
+board.mount(oscillator)
+board.mount(speaker)
+board.patch(oscillator.sine_output, speaker.audio_input)
+```
+
+The lesson program asks this completed board for 132,300 samples. Three seconds at 44,100 samples per second require 132,300 samples. The output adapter writes those samples into a WAV file and asks macOS to play the file.
+
+## You Can Hear the First Board.
+
+Run this command from the project directory:
 
 ```sh
 python3 src/lesson_01_tone.py
 ```
 
-The program writes the audio data, then starts `afplay`. That macOS program opens the sound device that macOS has selected and plays the WAV file. Headphones or speakers must be connected, and the system output volume must be audible.
+The program writes three seconds of A4 to `output/lesson-01-a4.wav` and plays it through the selected macOS sound device.
 
-The program uses a file instead of a pipe in this lesson because the file makes the PCM data inspectable and reusable. A later real-time lesson can keep an audio buffer in memory and send buffers continuously to an audio engine.
-
-## These Experiments Change the Tone.
-
-Change `FREQUENCY` from `440.0` to `220.0`. The result is A3, one octave lower, because halving a frequency lowers a note by one octave. Change it to `880.0` for A5, one octave higher.
-
-Change `AMPLITUDE` between `0.0` and `1.0`. This number is the source level, not necessarily the perceived loudness, because human hearing and the sound device both affect perceived loudness. Values above `1.0` would exceed the 16-bit range after scaling, so later lessons will explain safe mixing and clipping.
-
-## This Lesson Has Deliberate Limits.
-
-This program does not respond to a keyboard, schedule notes, retain a loop, or run continuously. It makes a fixed buffer before playback. Those limits keep the first primitive visible: a digital sound is a sequence of samples.
-
-The next lesson will combine several sample streams, which is the basis for chords and many layers of an instrument.
+The next lesson keeps the same cable and speaker module while making the oscillator's frequency setting visible on the board.
