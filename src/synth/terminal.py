@@ -96,11 +96,15 @@ class TerminalLessonState:
 class TerminalLessonApp:
     """This object redraws a full-screen lesson at a rate separate from sample production."""
 
+    ACCENT_COLOR_PAIR = 1
+
     def __init__(self, state: TerminalLessonState, refresh_rate: float = 30.0) -> None:
         """Create an application with a fixed display refresh rate."""
         self.state = state
         self.refresh_rate = refresh_rate
         self.pulse_frame = 0
+        self._selected_panel_attribute = curses.A_REVERSE
+        self._selected_name_attribute = curses.A_BOLD
 
     def run(self) -> None:
         """Run the curses screen until the learner quits."""
@@ -110,6 +114,7 @@ class TerminalLessonApp:
         """Poll keyboard input and redraw at the fixed configured rate."""
         screen.keypad(True)
         screen.nodelay(True)
+        self._configure_colors()
         frame_period = 1.0 / self.refresh_rate
         next_frame = time.monotonic()
         while self.state.is_open:
@@ -123,6 +128,34 @@ class TerminalLessonApp:
                 next_frame = now + frame_period
             else:
                 time.sleep(min(0.01, next_frame - now))
+
+    def _configure_colors(self) -> None:
+        """Use one accent pair when the terminal supports colors and retain text-only cues otherwise."""
+        self._selected_panel_attribute = curses.A_REVERSE
+        self._selected_name_attribute = curses.A_BOLD
+        try:
+            supports_colors = curses.has_colors()
+        except curses.error:
+            return
+        if not supports_colors:
+            return
+        try:
+            curses.start_color()
+        except curses.error:
+            return
+        background = curses.COLOR_BLACK
+        try:
+            curses.use_default_colors()
+            background = -1
+        except curses.error:
+            pass
+        try:
+            curses.init_pair(self.ACCENT_COLOR_PAIR, curses.COLOR_CYAN, background)
+            accent_attribute = curses.color_pair(self.ACCENT_COLOR_PAIR)
+        except curses.error:
+            return
+        self._selected_panel_attribute |= accent_attribute
+        self._selected_name_attribute |= accent_attribute
 
     @staticmethod
     def _command_for_key(key: int) -> str | None:
@@ -166,11 +199,21 @@ class TerminalLessonApp:
                 f"{self.state.lesson.key_summary}. r restores defaults and stops audio. ? closes this reference. q quits.",
                 *self.state.lesson.reference_lines,
             ]
+            for offset, line in enumerate(lines):
+                self._write(screen, teaching_top + offset, 0, line, curses.A_BOLD if offset == 0 else 0)
         else:
             selected = self.state.selected_panel
-            lines = [f"Selected: {selected.label}. {selected.prose[0]}", selected.prose[1]]
-        for offset, line in enumerate(lines):
-            self._write(screen, teaching_top + offset, 0, line, curses.A_BOLD if offset == 0 else 0)
+            prefix = "Selected: "
+            self._write(screen, teaching_top, 0, prefix, curses.A_BOLD)
+            self._write(screen, teaching_top, len(prefix), selected.label, self._selected_name_attribute)
+            self._write(
+                screen,
+                teaching_top,
+                len(prefix) + len(selected.label),
+                f". {selected.prose[0]}",
+                curses.A_BOLD,
+            )
+            self._write(screen, teaching_top + 1, 0, selected.prose[1])
         status_row = height - 2
         self._write(
             screen,
@@ -184,7 +227,7 @@ class TerminalLessonApp:
 
     def _draw_panel(self, screen: curses.window, top: int, left: int, width: int, panel: ModulePresentation, selected: bool) -> None:
         """Draw one compact module panel from presentation and module-owned state."""
-        attribute = curses.A_REVERSE if selected else 0
+        attribute = self._selected_panel_attribute if selected else 0
         self._write(screen, top, left, "+" + "-" * (width - 2) + "+", attribute)
         self._write(screen, top + 1, left, "|" + self._fit(panel.label, width - 2).center(width - 2) + "|", attribute)
         self._write(screen, top + 2, left, "|" + self._fit(panel.format_readout(), width - 2).ljust(width - 2) + "|", attribute)
