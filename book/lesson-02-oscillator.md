@@ -47,7 +47,7 @@ At 440 Hz and 44,100 samples per second, the amount is `440 / 44100`, or about 0
 
 ## The Program Uses the Oscillator One Sample at a Time.
 
-The important line in the lesson program is:
+The important line in [the audio program](../src/lesson_02_oscillator.py) is:
 
 ```python
 oscillator.next_sample()
@@ -56,6 +56,24 @@ oscillator.next_sample()
 That line asks the oscillator for one number. The lesson calls it 132,300 times because three seconds at 44,100 samples per second require 132,300 numbers.
 
 The oscillator produces values from `-1.0` to `1.0`. The lesson program multiplies each value by `MONITOR_LEVEL`, which is 0.25, before it sends the values to the output code. This keeps playback at a restrained level.
+
+## The Laboratory Shows the Same Oscillator in Slow Motion.
+
+The [visual laboratory](../src/lesson_02_view.py) imports the same [SineOscillator code](../src/synth/oscillator.py) as the audio program. The two programs differ only in what they do after they ask the oscillator for samples.
+
+```text
+                         SineOscillator
+                                |
+                 next_sample() returns one value
+                         /                  \
+                        v                    v
+                audio program          visual laboratory
+          requests 132,300 values      requests 10 values
+          writes a WAV file             displays phase and sample value
+          plays the tone                moves the dot on the waveform
+```
+
+The laboratory gives the phase movement a human-visible pace. Its Run button repeatedly makes groups of ten `next_sample()` requests. Its Request 10 Samples button makes one group of ten requests. The dot marks the oscillator's phase after those requests, and the value in the oscillator panel is the most recently returned sample.
 
 ## You Can Read the Complete Signal Path.
 
@@ -78,7 +96,7 @@ speaker
 
 The audio output code moves completed samples to the Mac's sound device. The oscillator supplies the values that begin the signal path.
 
-## You Can Run and Change the Lesson.
+## You Can Hear the Oscillator.
 
 Run this command from the project directory:
 
@@ -88,7 +106,7 @@ python3 src/lesson_02_oscillator.py
 
 Change `FREQUENCY_HZ` from `440.0` to `220.0`, then run the program again. The waveform now repeats 220 times per second, so the sound is one octave lower. Change it to `880.0` for one octave higher.
 
-## You Can Watch the Oscillator Work.
+## You Can Watch the Same Oscillator Work.
 
 Run this command from the project directory:
 
@@ -97,6 +115,6 @@ python3 -m pip install --user -r requirements.txt
 python3 src/lesson_02_view.py
 ```
 
-The window shows the oscillator module, its input values, its current phase, its most recent sample, and the waveform that those samples follow. The Run button requests ten audio samples at a visible speed. The Request 10 Samples button makes one visible step, and the Reset button returns phase to the start of the cycle.
+The window shows the oscillator module, its input values, its current phase, its most recent sample, and the waveform that those samples follow. The Run button requests ten audio samples at a visible speed. The Request 10 Samples button makes one visible step, and the Reset button returns phase to the start of the cycle. The sound program and the visual laboratory use the same oscillator class.
 
 The next lesson will give musicians a way to name these frequencies without changing the oscillator itself.

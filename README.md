@@ -12,7 +12,7 @@ Python is the teaching language because its standard library can make a WAV file
 
 The Lesson 2 view is in `src/lesson_02_view.py`. It shows the oscillator's inputs, stored phase, output sample, and waveform while using the same oscillator code as the audio lesson.
 
-## You Can Run the First Lesson.
+## You Can Run the Lesson Programs.
 
 Run the program from this directory.
 
@@ -23,4 +23,4 @@ python3 src/lesson_02_oscillator.py
 python3 src/lesson_02_view.py
 ```
 
-Each program writes three seconds of A4 to `output/` and starts `afplay`, which plays the file through macOS's selected sound output device. The WAV files are derived output and are not stored in Git.
+The two audio programs write three seconds of A4 to `output/` and start `afplay`, which plays the file through macOS's selected sound output device. The Lesson 2 view displays the same oscillator's state and waveform. The WAV files are derived output and are not stored in Git.
