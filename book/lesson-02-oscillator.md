@@ -1,6 +1,6 @@
 # Lesson 2 Builds a Repeating Sound Source.
 
-Lesson 1 made one tone by calculating every number in advance. The program knew that it needed three seconds of A4, calculated all 132,300 sample values, saved them in a file, and played the file. That method works, but it does not yet describe a useful instrument. An instrument needs to keep making sound while a player changes the pitch, holds a key, or turns a knob.
+Lesson 1 made one tone by calculating every number in advance. The program knew that it needed three seconds of A4, calculated all 132,300 sample values, saved them in a file, and played the file. This lesson focuses on the repeating source that makes those sample values.
 
 This lesson changes one part of the first program. Instead of asking, "What is sample number 57?", the program keeps track of a repeating wave and answers a different question repeatedly: "What sample comes next?"
 
@@ -23,9 +23,9 @@ Each request for a sample moves the wave forward by one position. A real 440 Hz 
 
 An electronic synthesizer has separate physical parts. One part creates a repeating electrical signal. Another part changes its level. Another part can remove some of its high-frequency content. Musicians connect these parts with cables.
 
-The program uses the word *module* for one small, named part that has one job and a clear connection to other parts. The `SineOscillator` module has one job: it makes the next value of a sine wave. It does not know about WAV files, speakers, note names, filters, or loudness controls.
+The program uses the word *module* for one small, named part that has one job and a clear connection to other parts. The `SineOscillator` module makes the next value of a sine wave. Its connection is the `next_sample()` operation: another part asks for one value, and the oscillator supplies it.
 
-This separation has a practical result. A later sound-combining part can ask any sound-source module for its next sample. It will not need to know whether that source is a sine wave, a square wave, or something else. The modules can change inside, as long as they keep the same simple connection.
+This separation keeps the connection simple. Code that needs a sound value asks for the next sample. The oscillator handles the phase calculation needed to supply that value.
 
 ## The Oscillator Remembers Its Position.
 
@@ -55,7 +55,7 @@ oscillator.next_sample()
 
 That line asks the oscillator for one number. The lesson calls it 132,300 times because three seconds at 44,100 samples per second require 132,300 numbers.
 
-The oscillator produces values from `-1.0` to `1.0`. The lesson program multiplies each value by `MONITOR_LEVEL`, which is 0.25, before it sends the values to the output code. This keeps the first playback at a restrained level. It is not yet a modeled amplifier; a later lesson will make level control into its own module.
+The oscillator produces values from `-1.0` to `1.0`. The lesson program multiplies each value by `MONITOR_LEVEL`, which is 0.25, before it sends the values to the output code. This keeps playback at a restrained level.
 
 ## You Can Read the Complete Signal Path.
 
@@ -76,7 +76,7 @@ speaker
     moves back and forth and makes a 440 Hz tone
 ```
 
-The audio output code is separate because it is not part of the synthesizer lesson. Its job is only to move completed samples to the Mac's sound device. The oscillator is the new instrument part in this lesson.
+The audio output code moves completed samples to the Mac's sound device. The oscillator supplies the values that begin the signal path.
 
 ## You Can Run and Change the Lesson.
 
@@ -87,5 +87,15 @@ python3 src/lesson_02_oscillator.py
 ```
 
 Change `FREQUENCY_HZ` from `440.0` to `220.0`, then run the program again. The waveform now repeats 220 times per second, so the sound is one octave lower. Change it to `880.0` for one octave higher.
+
+## You Can Watch the Oscillator Work.
+
+Run this command from the project directory:
+
+```sh
+python3 src/lesson_02_view.py
+```
+
+The window shows the oscillator module, its input values, its current phase, its most recent sample, and the waveform that those samples follow. The Run button advances the oscillator one audio sample at a time at a visible speed. The Step button advances it once, and the Reset button returns phase to the start of the cycle.
 
 The next lesson will give musicians a way to name these frequencies without changing the oscillator itself.
