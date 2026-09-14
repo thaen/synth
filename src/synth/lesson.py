@@ -1,5 +1,8 @@
 """This module defines the board and terminal presentation that every lesson supplies."""
 
+from __future__ import annotations
+
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from synth.board import Board
@@ -29,6 +32,18 @@ class ModulePresentation:
     label: str
     prose: tuple[str, str]
     visible_controls: tuple[VisibleControl, ...] = ()
+    readout: str | Callable[[], str] | None = None
+    inactive_state: str = "idle"
+    active_state: str = "active"
+
+    def format_readout(self) -> str:
+        """Return the panel's declared readout without teaching module details to the view."""
+        if callable(self.readout):
+            return self.readout()
+        if self.readout is not None:
+            return self.readout
+        state = self.module.display_state()
+        return state[0] if state else ""
 
 
 @dataclass(frozen=True)
@@ -52,6 +67,11 @@ class Lesson:
     panel_positions: list[tuple[int, int]]
     panels: list[ModulePresentation] = field(default_factory=list)
     reset_behavior: ResetBehavior = field(default_factory=ResetBehavior)
+    audio_instruction: str = "Use b to start or stop audio."
+    audio_active_message: str = "Audio is active."
+    audio_inactive_message: str = "Audio is muted."
+    key_summary: str = "b starts or stops audio."
+    reference_lines: tuple[str, ...] = ()
     _initial_control_values: dict[int, float] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:

@@ -1,66 +1,42 @@
-# Lesson 1 Produces a Steady Tone.
+# Lesson 1 shows how a source reaches an output.
 
-The first board produces a steady A4 tone, which repeats 440 times each second. A4 is the musical A at 440 Hz. A tone at 40 Hz would be much lower and would not be the usual A reference.
+Lesson 1 has one source, one cable, and one output boundary. Press `b` to hear A4, a steady sine tone at 440 Hz.
 
-An instrument board is a surface that holds electronic parts. Each part is a module. A module has connection points called jacks, and a patch cable plugs an output jack into an input jack.
-
-The first board has a sine oscillator, an audio-output module, and one patch cable.
-
-```text
-+---------------------------+       patch cable       +---------------------------+
-| SINE OSCILLATOR           |------------------------>| AUDIO OUTPUT              |
-| Base frequency: 440 Hz    |   changing voltage      | Audio input               |
-| Sine output jack          |                         | Monitor level: 0.25       |
-+---------------------------+                         +---------------------------+
-```
-
-## The Oscillator Produces a Repeating Voltage.
-
-The sine oscillator produces a repeating electrical pattern called a sine wave. The pattern rises smoothly from zero to a positive peak, returns to zero, falls to a negative peak, and returns to zero. One complete rise and fall is one cycle.
-
-The oscillator's base frequency is 440 Hz, so it makes 440 cycles each second. In this digital model, one number represents the voltage at one instant. At every sample time, the oscillator places its next voltage on the jack named `Sine output`.
-
-The board has 44,100 sample times each second. The audio adapter converts the resulting stream of numbers to an electrical signal, and a speaker converts that changing electrical signal to motion and air pressure.
-
-## The Cable Carries Voltage Between the Modules.
-
-The cable plugs from the oscillator's `Sine output` jack to the audio-output module's `Audio input` jack. A physical patch cable is a conductor. It does not determine the meaning of the voltage that it carries.
-
-The oscillator makes a voltage that changes at an audio rate. The audio-output module interprets the voltage at its input as a signal to send toward the audio adapter. Those module roles make this cable part of an audio path.
-
-The audio-output module has a monitor-level control set to 0.25. It multiplies the incoming voltage by 0.25 before the audio adapter receives it. That visible control keeps the first tone at a restrained level.
-
-```text
-oscillator output voltage → patch cable → audio-output voltage → audio adapter → speaker
-```
-
-## The Code Follows the Board.
-
-The [Lesson 1 configuration](../src/lessons/lesson_01.py) mounts the sine oscillator and audio output, then patches their two jacks. The [board code](../src/synth/board.py) follows the cable direction when it advances modules at each sample time. The [audio program](../src/lesson_01_tone.py) loads the configuration, asks the board for samples, and sends the final samples to the audio adapter.
-
-The configuration, board, and audio program are the three files to read in that order. Each file has one role: describe the physical patch, advance the mounted modules, and deliver completed audio samples.
-
-## The Generic Viewer Loads This Board.
-
-The board viewer is one program for the whole course. It imports a lesson configuration by number, then draws the modules, jacks, cables, controls, and panel state that the configuration supplies.
-
-Run these commands from the project directory:
+Run the terminal lesson from the project directory.
 
 ```sh
 python3 -m pip install --user -r requirements.txt
-python3 src/view.py --lesson 1
+python3 src/terminal_view.py --lesson 1
 ```
 
-The viewer shows the first board's two modules and one patch cable on a board with open space around them. The Run control advances the complete board in groups of ten samples, and the audio-output voltage display shows the voltage currently arriving through the cable.
+The terminal starts with the Sine Wave Creator selected. Its panel reads `Frequency  440 Hz` and `State: idle`. The Audio Output panel reads `To system sound` and `State: silent`.
 
-## You Can Hear the First Board.
+## The source makes the signal.
 
-Run this command from the project directory:
+The Sine Wave Creator is the source in this board. It makes a sine wave, which is a smooth repeating signal. In the digital model, the signal is a changing sequence of numbers that represents audio.
 
-```sh
-python3 src/lesson_01_tone.py
-```
+Frequency tells how many cycles of the repeating pattern occur each second. Hertz, written `Hz`, means cycles each second. The source runs at 440 Hz, so the pattern completes 440 cycles each second.
 
-The program loads the same Lesson 1 configuration, requests 132,300 samples from its board, writes three seconds of A4 to `output/lesson-01-a4.wav`, and plays the file through the selected macOS sound device.
+A4 is the reference pitch at 440 Hz. It gives the lesson one fixed tone, so the connection between source and output is easy to hear.
 
-The next lesson adds a pitch-control module and one patch cable to this board.
+## The output sends the completed signal to the computer.
+
+The cable runs from the Sine Wave Creator to Audio Output. The Audio Output module is the boundary between the board and the computer's selected sound device. A speaker can be the physical device after that boundary, but the module itself is Audio Output.
+
+The moving mark on the cable begins when the tone is active. It moves from the source toward the output. The mark shows that the current signal path is in use. It is an interface animation, so it does not show electricity moving at physical speed.
+
+## The `b` key uses a latch.
+
+Press `b` once to start A4. The source changes from `idle` to `active`, the output changes from `silent` to `active`, and the cable begins to pulse. Press `b` again to stop the tone. The source returns to `idle`, the output returns to `silent`, and the cable stops pulsing.
+
+This start and stop rule is a latch. The tone stays on after a press, then changes state on the next press. Terminal programs receive key presses reliably, but portable terminals do not provide one common way to report when a key is released.
+
+The arrow keys select a panel. Lesson 1 does not expose a control to change, so up and down leave the board unchanged and state why in the status line. Press `?` to read the short definitions for signal, sine wave, frequency, hertz, A4, and Audio Output.
+
+Press `r` to stop audio and return the lesson to its defaults. The Sine Wave Creator becomes selected, the tone becomes silent, and the oscillator returns to the start of its sine-wave cycle. Press `q` to stop the audio adapter and exit.
+
+## The code keeps the view separate from the signal path.
+
+The [Lesson 1 configuration](../src/lessons/lesson_01.py) declares the two panels, their labels, their state words, the 440 Hz text, the latch messages, and the terminology reference. The [board](../src/synth/board.py) advances the source, follows the patch cable, and reads Audio Output. The [terminal adapter](../src/synth/terminal.py) renders the lesson data without oscillator or output rules of its own.
+
+The real-time adapter requests board samples only while the latch is active. Its [deterministic collector](../src/synth/realtime_audio.py) has no sound device and returns a repeatable sequence of samples during tests. The [terminal tests](../tests/test_terminal.py) check the latch, panel states, reset, and the 440 Hz sample stream without requiring an audio device.
