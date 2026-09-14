@@ -18,7 +18,7 @@ Lesson 1 supplies this two-module configuration. The oscillator produces a volta
 2. Lesson 2 adds Gain between the oscillator and audio output.
 3. Lesson 3 adds a pitch-control module and its control cable to the oscillator.
 4. Lesson 4 adds sine, triangle, square, and sawtooth waveform choices to the oscillator.
-5. Lesson 5 will add a low-pass filter between Gain and Audio Output.
+5. Lesson 5 adds a low-pass filter between Gain and Audio Output.
 6. Lesson 6 will add a gate-control module and form one playable voice.
 7. Lesson 7 will add an attack-decay envelope for gain.
 8. Lesson 8 will add the sustain and release stages to that envelope.
@@ -27,4 +27,4 @@ Lesson 1 supplies this two-module configuration. The oscillator produces a volta
 
 ## The Code Keeps the Physical Parts Separate.
 
-`patch.py` contains jacks and cables. `controls.py` contains front-panel knobs. `oscillator.py`, `pitch_control.py`, and `output.py` contain the current physical modules. `board.py` advances a mounted board on its sample clock. Each file in `src/lessons/` provides one completed board configuration. `view.py` displays every configuration with the same interface.
+`patch.py` contains jacks and cables. `controls.py` contains front-panel knobs. `oscillator.py`, `pitch_control.py`, `low_pass_filter.py`, and `output.py` contain the current physical modules. `board.py` advances a mounted board on its sample clock. Each file in `src/lessons/` provides one completed board configuration. `view.py` displays every configuration with the same interface.

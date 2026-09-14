@@ -9,7 +9,9 @@ Python is the teaching language because its standard library can make a WAV file
 1. [Lesson 1: Producing a Tone](book/lesson-01-producing-a-tone.md) generates A4, the 440 Hz concert A.
 2. [Lesson 2: Gain Changes Signal Size](book/lesson-02-oscillator.md) places a gain module between the oscillator and audio output.
 3. [Lesson 3: Pitch Selects Frequency](book/lesson-03-pitch.md) adds semitone pitch control to the oscillator.
-4. [The course map](book/course-map.md) records the module, jack, and cable order for the growing board.
+4. [Lesson 4: Waveform and Timbre](book/lesson-04-waveform-and-timbre.md) adds waveform selection to the oscillator.
+5. [Lesson 5: Low-Pass Filter](book/lesson-05-low-pass-filter.md) adds a filter after Gain.
+6. [The course map](book/course-map.md) records the module, jack, and cable order for the growing board.
 
 The Pygame board display is `src/view.py`. The terminal board is `src/terminal_view.py`. Each view loads the requested configuration from `src/lessons/` and reads the modules, jacks, cables, and front-panel controls that the configuration supplies.
 
@@ -26,6 +28,8 @@ python3 src/view.py --lesson 2
 python3 src/terminal_view.py --lesson 1
 python3 src/terminal_view.py --lesson 2
 python3 src/terminal_view.py --lesson 3
+python3 src/terminal_view.py --lesson 4
+python3 src/terminal_view.py --lesson 5
 ```
 
 The two audio programs write three seconds of A4 to `output/` and start `afplay`, which plays the file through macOS's selected sound output device. The board display loads the same lesson configuration as the matching audio program. The WAV files are derived output and are not stored in Git.

@@ -7,6 +7,7 @@ from lessons.lesson_01 import build as build_lesson_01
 from lessons.lesson_02 import build as build_lesson_02
 from lessons.lesson_03 import build as build_lesson_03
 from lessons.lesson_04 import build as build_lesson_04
+from lessons.lesson_05 import build as build_lesson_05
 from synth.realtime_audio import DeterministicAudioCollector, SoundDeviceAudioAdapter
 from synth.terminal import TerminalLessonApp, TerminalLessonState
 
@@ -389,6 +390,85 @@ class TerminalLessonStateTests(unittest.TestCase):
         self.assertEqual(oscillator.visible_controls[0].format_value(), "Sine")
         self.assertEqual(gain.visible_controls[0].control.value, 0.50)
         self.assertEqual(oscillator.module.phase_cycles, 0.0)
+
+    def test_lesson_five_inserts_a_low_pass_filter_and_starts_with_sawtooth(self) -> None:
+        """Lesson 5 keeps the earlier path and places its filter before Audio Output."""
+        lesson = build_lesson_05()
+        pitch, oscillator, gain, low_pass_filter, output = lesson.visible_panels
+
+        self.assertEqual(
+            [panel.label for panel in lesson.visible_panels],
+            ["Pitch", "Oscillator", "Gain", "Low-Pass Filter", "Audio Output"],
+        )
+        self.assertEqual(oscillator.format_readout(), "Sawtooth  440.00 Hz")
+        self.assertEqual(oscillator.visible_controls, ())
+        self.assertEqual(len(low_pass_filter.visible_controls), 1)
+        self.assertEqual(low_pass_filter.visible_controls[0].label, "Cutoff")
+        self.assertEqual(low_pass_filter.visible_controls[0].format_value(), "12000 Hz")
+        self.assertEqual(len(lesson.board.cables), 4)
+        self.assertIs(lesson.board.cables[0].source.owner, oscillator.module)
+        self.assertIs(lesson.board.cables[0].destination.owner, gain.module)
+        self.assertIs(lesson.board.cables[2].source.owner, gain.module)
+        self.assertIs(lesson.board.cables[2].destination.owner, low_pass_filter.module)
+        self.assertIs(lesson.board.cables[3].source.owner, low_pass_filter.module)
+        self.assertIs(lesson.board.cables[3].destination.owner, output.module)
+        self.assertIs(lesson.board.cables[1].source.owner, pitch.module)
+        self.assertIs(lesson.board.cables[1].destination.owner, oscillator.module)
+
+    def test_lesson_five_cutoff_changes_by_a_semitone_and_reset_restores_the_open_filter(self) -> None:
+        """The generic terminal adjusts cutoff logarithmically and reset restores the lesson default."""
+        lesson = build_lesson_05()
+        collector = DeterministicAudioCollector()
+        state = TerminalLessonState(lesson, collector)
+
+        for _ in range(3):
+            state.dispatch("right")
+        state.dispatch("down")
+
+        cutoff = lesson.visible_panels[3].visible_controls[0]
+        self.assertAlmostEqual(cutoff.control.value, 12_000.0 * 2 ** (-1.0 / 12.0))
+        self.assertEqual(cutoff.format_value(), "11326 Hz")
+        self.assertIn("Cutoff", state.status_message)
+
+        state.dispatch("b")
+        collector.collect(32)
+        state.dispatch("r")
+
+        self.assertFalse(collector.is_active)
+        self.assertEqual(state.selected_panel.label, "Pitch")
+        self.assertEqual(cutoff.format_value(), "12000 Hz")
+        self.assertEqual(lesson.visible_panels[1].format_readout(), "Sawtooth  440.00 Hz")
+        self.assertEqual(lesson.visible_panels[1].module.phase_cycles, 0.0)
+
+    def test_lesson_five_response_trace_uses_generic_terminal_panel_data(self) -> None:
+        """The terminal draws the filter response trace from the presentation contract."""
+        class RecordingScreen:
+            """This replacement records terminal output without a terminal emulator."""
+
+            def __init__(self) -> None:
+                self.calls: list[tuple[int, int, str]] = []
+
+            def getmaxyx(self) -> tuple[int, int]:
+                return (30, 120)
+
+            def erase(self) -> None:
+                self.calls = []
+
+            def addnstr(
+                self, row: int, column: int, text: str, count: int, _attribute: int
+            ) -> None:
+                self.calls.append((row, column, text[:count]))
+
+            def refresh(self) -> None:
+                return None
+
+        state = TerminalLessonState(build_lesson_05(), DeterministicAudioCollector())
+        screen = RecordingScreen()
+        TerminalLessonApp(state)._draw(screen)
+
+        trace = state.lesson.visible_panels[3].format_trace()
+        for trace_line in trace:
+            self.assertTrue(any(trace_line.rstrip() in text for _row, _column, text in screen.calls))
 
 
 class AudioAdapterTests(unittest.TestCase):

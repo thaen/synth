@@ -18,6 +18,7 @@ class VisibleControl:
     step: float
     description: str = ""
     value_formatter: Callable[[], str] | None = None
+    adjustment: Callable[[int], None] | None = None
 
     def format_value(self) -> str:
         """Return the current value in the form that belongs on a terminal panel."""
@@ -25,6 +26,13 @@ class VisibleControl:
             return self.value_formatter()
         suffix = f" {self.control.unit}" if self.control.unit else ""
         return f"{self.control.value:.2f}{suffix}"
+
+    def adjust(self, direction: int) -> None:
+        """Apply one lesson-declared adjustment without teaching the terminal its rule."""
+        if self.adjustment is not None:
+            self.adjustment(direction)
+            return
+        self.control.set_value(self.control.value + direction * self.step)
 
 
 @dataclass(frozen=True)
