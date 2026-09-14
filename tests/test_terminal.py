@@ -1,7 +1,9 @@
 """These tests protect the generic terminal lesson state and audio seam."""
 
+import curses
 import math
 import unittest
+from unittest.mock import patch
 
 from lessons.lesson_01 import build as build_lesson_01
 from lessons.lesson_02 import build as build_lesson_02
@@ -487,6 +489,86 @@ class TerminalLessonStateTests(unittest.TestCase):
         trace = state.lesson.visible_panels[3].format_trace()
         for trace_line in trace:
             self.assertTrue(any(trace_line.rstrip() in text for _row, _column, text in screen.calls))
+
+
+class TerminalRendererAccentTests(unittest.TestCase):
+    """These tests protect the selection relationship between the board and teaching panel."""
+
+    class RecordingScreen:
+        """This replacement records output attributes without a terminal emulator."""
+
+        def __init__(self) -> None:
+            """Create a screen with room for the Lesson 1 layout."""
+            self.calls: list[tuple[int, int, str, int]] = []
+
+        def getmaxyx(self) -> tuple[int, int]:
+            """Return a fixed terminal size."""
+            return (20, 80)
+
+        def erase(self) -> None:
+            """Clear the calls from the previous frame."""
+            self.calls = []
+
+        def addnstr(self, row: int, column: int, text: str, count: int, attribute: int) -> None:
+            """Record one clipped renderer write."""
+            self.calls.append((row, column, text[:count], attribute))
+
+        def refresh(self) -> None:
+            """Provide the screen method used at the end of a frame."""
+            return None
+
+    def test_color_terminal_uses_one_accent_for_selected_panel_and_teaching_name(self) -> None:
+        """A color terminal gives the selected panel and teaching name one color pair."""
+        state = TerminalLessonState(build_lesson_01(), DeterministicAudioCollector())
+        app = TerminalLessonApp(state)
+        screen = self.RecordingScreen()
+        accent_attribute = 256
+
+        with (
+            patch("synth.terminal.curses.has_colors", return_value=True),
+            patch("synth.terminal.curses.start_color") as start_color,
+            patch("synth.terminal.curses.use_default_colors"),
+            patch("synth.terminal.curses.init_pair") as init_pair,
+            patch("synth.terminal.curses.color_pair", return_value=accent_attribute),
+        ):
+            app._configure_colors()
+
+        start_color.assert_called_once_with()
+        init_pair.assert_called_once_with(app.ACCENT_COLOR_PAIR, curses.COLOR_CYAN, -1)
+        app._draw(screen)
+
+        selected_panel_attributes = {
+            attribute
+            for row, column, _text, attribute in screen.calls
+            if column == 0 and 2 <= row <= 2 + app._panel_height(state.lesson.visible_panels)
+        }
+        self.assertEqual(selected_panel_attributes, {curses.A_REVERSE | accent_attribute})
+        teaching_name = next(call for call in screen.calls if call[2] == state.selected_panel.label)
+        self.assertEqual(teaching_name[3], curses.A_BOLD | accent_attribute)
+
+    def test_monochrome_terminal_keeps_reverse_panel_and_bold_teaching_name(self) -> None:
+        """A terminal without colors retains visible selection cues without color setup."""
+        state = TerminalLessonState(build_lesson_01(), DeterministicAudioCollector())
+        app = TerminalLessonApp(state)
+        screen = self.RecordingScreen()
+
+        with (
+            patch("synth.terminal.curses.has_colors", return_value=False),
+            patch("synth.terminal.curses.start_color") as start_color,
+        ):
+            app._configure_colors()
+
+        start_color.assert_not_called()
+        app._draw(screen)
+
+        selected_panel_attributes = {
+            attribute
+            for row, column, _text, attribute in screen.calls
+            if column == 0 and 2 <= row <= 2 + app._panel_height(state.lesson.visible_panels)
+        }
+        self.assertEqual(selected_panel_attributes, {curses.A_REVERSE})
+        teaching_name = next(call for call in screen.calls if call[2] == state.selected_panel.label)
+        self.assertEqual(teaching_name[3], curses.A_BOLD)
 
 
 class AudioAdapterTests(unittest.TestCase):
