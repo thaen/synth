@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wiki browser</title>
+<style>
+  :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+  body { margin: 0; display: grid; grid-template-columns: 19rem minmax(0, 1fr); height: 100vh; color: CanvasText; background: Canvas; }
+  aside { border-right: 1px solid color-mix(in srgb, CanvasText 18%, Canvas); overflow: auto; padding: 1rem; }
+  main { overflow: auto; padding: 2.5rem clamp(1.5rem, 5vw, 5rem); }
+  #document { max-width: 52rem; line-height: 1.6; }
+  button { font: inherit; padding: .45rem .7rem; margin: 0 .35rem .8rem 0; }
+  #status { display: block; font-size: .86rem; color: color-mix(in srgb, CanvasText 65%, Canvas); margin-bottom: .8rem; }
+  ul.tree, ul.tree ul { list-style: none; padding-left: 1rem; margin: .15rem 0; }
+  .tree details > summary { cursor: pointer; }
+  .tree a { color: inherit; text-decoration: none; display: inline-block; padding: .14rem .25rem; border-radius: .2rem; overflow-wrap: anywhere; }
+  .tree a:hover, .tree a.active { background: color-mix(in srgb, Highlight 18%, Canvas); color: CanvasText; }
+  a { color: LinkText; } pre { overflow: auto; padding: 1rem; background: color-mix(in srgb, CanvasText 7%, Canvas); border-radius: .35rem; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em; }
+  :not(pre) > code { padding: .1em .3em; background: color-mix(in srgb, CanvasText 8%, Canvas); border-radius: .2rem; }
+  blockquote { margin-left: 0; padding-left: 1rem; border-left: .25rem solid color-mix(in srgb, CanvasText 25%, Canvas); }
+  hr { border: 0; border-top: 1px solid color-mix(in srgb, CanvasText 20%, Canvas); }
+  .muted { color: color-mix(in srgb, CanvasText 65%, Canvas); }
+  @media (max-width: 700px) { body { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); } aside { border-right: 0; border-bottom: 1px solid color-mix(in srgb, CanvasText 18%, Canvas); max-height: 35vh; } }
+</style>
+<body>
+  <aside>
+    <button id="choose">Choose wiki folder</button>
+    <select id="roots" aria-label="Saved wiki folders" hidden></select>
+    <button id="reconnect" hidden>Reconnect</button>
+    <span id="status">Choose this folder once to begin.</span>
+    <nav id="tree" aria-label="Files"></nav>
+  </aside>
+  <main><article id="document"><h1>Wiki browser</h1><p>This page reads only the folder you choose. It has no server and sends no files anywhere.</p></article></main>
+<script>
+const DB = 'wiki-browser', STORE = 'handles', ROOTS_KEY = 'roots', LEGACY_KEY = 'root';
+let root, roots = [], files = new Map(), activePath = '';
+const $ = (id) => document.getElementById(id);
+const escape = (s) => s.replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function db() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB, 2);
+    request.onupgradeneeded = () => {
+      if (!request.result.objectStoreNames.contains(STORE)) request.result.createObjectStore(STORE);
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+async function savedRoots() {
+  const database = await db();
+  return new Promise((resolve, reject) => {
+    const tx = database.transaction(STORE, 'readonly');
+    const store = tx.objectStore(STORE);
+    const request = store.get(ROOTS_KEY);
+    request.onsuccess = () => {
+      if (Array.isArray(request.result)) return resolve(request.result);
+      const legacy = store.get(LEGACY_KEY);
+      legacy.onsuccess = () => resolve(legacy.result ? [legacy.result] : []);
+      legacy.onerror = () => reject(legacy.error);
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+async function saveRoots() {
+  const database = await db();
+  return new Promise((resolve, reject) => {
+    const tx = database.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).put(roots, ROOTS_KEY);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+function renderRoots() {
+  const selector = $('roots'); selector.replaceChildren();
+  const counts = new Map();
+  for (const handle of roots) counts.set(handle.name, (counts.get(handle.name) || 0) + 1);
+  const seen = new Map();
+  roots.forEach((handle, index) => {
+    const occurrence = (seen.get(handle.name) || 0) + 1; seen.set(handle.name, occurrence);
+    const option = new Option(counts.get(handle.name) > 1 ? `${handle.name} (${occurrence})` : handle.name, index);
+    selector.add(option);
+  });
+  selector.hidden = roots.length === 0;
+  selector.value = String(roots.indexOf(root));
+}
+async function addRoot(handle) {
+  for (const saved of roots) if (await saved.isSameEntry(handle)) return saved;
+  roots.push(handle); await saveRoots(); return handle;
+}
+
+async function choose() {
+  try {
+    root = await addRoot(await window.showDirectoryPicker({ id: 'wiki-browser', mode: 'read' }));
+    renderRoots();
+    await connect();
+  } catch (error) {
+    if (error.name !== 'AbortError') setStatus(`The folder could not be opened: ${error.message}`);
+  }
+}
+async function selectRoot() {
+  const handle = roots[Number($('roots').value)];
+  if (!handle || handle === root) return;
+  root = handle;
+  try {
+    if (await root.requestPermission({ mode: 'read' }) === 'granted') await connect();
+    else { setStatus(`Chrome did not grant access to ${root.name}.`); $('reconnect').hidden = false; }
+  } catch (error) { setStatus(`The saved folder could not be opened: ${error.message}`); }
+}
+async function reconnect() {
+  if (!root) return choose();
+  try {
+    if (await root.requestPermission({ mode: 'read' }) === 'granted') await connect();
+    else setStatus('Chrome did not grant access to this folder.');
+  } catch (error) { setStatus(`The saved folder could not be reopened: ${error.message}`); }
+}
+async function connect() {
+  files.clear();
+  const nav = $('tree'); nav.replaceChildren();
+  await populateDirectory(root, '', nav);
+  $('reconnect').hidden = true;
+  setStatus(`${root.name} is ready. Expand a folder to list its contents.`);
+  const fromHash = decodeURIComponent(location.hash.slice(1));
+  show(fromHash || 'index.md');
+}
+async function populateDirectory(directory, prefix, container) {
+  const entries = [];
+  for await (const handle of directory.values()) entries.push(handle);
+  entries.sort((a, b) => (a.kind === b.kind ? a.name.localeCompare(b.name) : a.kind === 'directory' ? -1 : 1));
+  const ul = document.createElement('ul'); ul.className = 'tree';
+  for (const handle of entries) {
+    const path = prefix ? `${prefix}/${handle.name}` : handle.name;
+    const li = document.createElement('li');
+    if (handle.kind === 'directory') {
+      const details = document.createElement('details');
+      const summary = document.createElement('summary'); summary.textContent = handle.name;
+      const child = document.createElement('div'); details.append(summary, child);
+      details.addEventListener('toggle', async () => {
+        if (details.open && !details.dataset.loaded) {
+          details.dataset.loaded = 'true';
+          await populateDirectory(handle, path, child);
+        }
+      });
+      li.append(details);
+    } else {
+      files.set(path, handle);
+      const link = document.createElement('a'); link.href = `#${encodeURIComponent(path)}`; link.textContent = handle.name; link.dataset.path = path; li.append(link);
+    }
+    ul.append(li);
+  }
+  container.append(ul);
+}
+async function fileHandle(path) {
+  if (files.has(path)) return files.get(path);
+  const parts = path.split('/').filter(Boolean); let directory = root;
+  for (const part of parts.slice(0, -1)) directory = await directory.getDirectoryHandle(part);
+  const handle = await directory.getFileHandle(parts.at(-1)); files.set(path, handle); return handle;
+}
+function resolvePath(reference) {
+  const [rawPath, fragment = ''] = reference.split('#');
+  if (!rawPath) return { path: activePath, fragment };
+  const parts = (rawPath.startsWith('/') ? rawPath.slice(1) : `${activePath.split('/').slice(0, -1).join('/')}/${rawPath}`).split('/');
+  const output = [];
+  for (const part of parts) { if (part && part !== '.') part === '..' ? output.pop() : output.push(part); }
+  return { path: output.join('/'), fragment };
+}
+function inline(text) {
+  let html = escape(text);
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  return html.replace(/\[([^\]]+)\]\(([^ )]+)(?:\s+&quot;[^&]*&quot;)?\)/g, (_, label, href) => {
+    if (/^(https?:|mailto:)/i.test(href)) return `<a href="${href}" target="_blank" rel="noreferrer">${label}</a>`;
+    const target = resolvePath(href);
+    return `<a href="#${encodeURIComponent(target.path)}" data-wiki-path="${escape(target.path)}" data-fragment="${escape(target.fragment)}">${label}</a>`;
+  });
+}
+function markdown(source) {
+  const lines = source.replace(/\r/g, '').split('\n'); let html = '', inCode = false, list = false, paragraph = [];
+  const flush = () => { if (paragraph.length) { html += `<p>${inline(paragraph.join(' '))}</p>`; paragraph = []; } };
+  const closeList = () => { if (list) { html += '</ul>'; list = false; } };
+  for (const line of lines) {
+    if (line.startsWith('```')) { flush(); closeList(); if (inCode) html += '</code></pre>'; else html += '<pre><code>'; inCode = !inCode; continue; }
+    if (inCode) { html += `${escape(line)}\n`; continue; }
+    const heading = line.match(/^(#{1,6})\s+(.+)$/);
+    if (heading) { flush(); closeList(); const level = heading[1].length; const id = heading[2].toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''); html += `<h${level} id="${id}">${inline(heading[2])}</h${level}>`; continue; }
+    if (/^\s*[-*_]\s*[-*_]\s*[-*_][-_ *]*$/.test(line)) { flush(); closeList(); html += '<hr>'; continue; }
+    const item = line.match(/^[-*+]\s+(.+)$/);
+    if (item) { flush(); if (!list) { html += '<ul>'; list = true; } html += `<li>${inline(item[1])}</li>`; continue; }
+    if (line.startsWith('> ')) { flush(); closeList(); html += `<blockquote>${inline(line.slice(2))}</blockquote>`; continue; }
+    if (!line.trim()) { flush(); closeList(); continue; }
+    closeList(); paragraph.push(line.trim());
+  }
+  flush(); closeList(); return html;
+}
+async function show(path) {
+  let handle;
+  try { handle = await fileHandle(path); }
+  catch (error) { $('document').innerHTML = `<h1>File not found</h1><p class="muted">${escape(path)}</p>`; return; }
+  activePath = path; location.hash = encodeURIComponent(path);
+  document.querySelectorAll('[data-path]').forEach((link) => link.classList.toggle('active', link.dataset.path === path));
+  const file = await handle.getFile(), article = $('document');
+  if (/\.md$/i.test(path)) article.innerHTML = markdown(await file.text());
+  else if (/^(text\/|application\/(json|javascript|xml))/.test(file.type) || /\.(txt|json|js|css|html?|ya?ml|toml|csv|log)$/i.test(path)) article.innerHTML = `<h1>${escape(path)}</h1><pre><code>${escape(await file.text())}</code></pre>`;
+  else article.innerHTML = `<h1>${escape(path)}</h1><p class="muted">This is a ${escape(file.type || 'binary')} file (${file.size.toLocaleString()} bytes). The browser does not display its contents here.</p>`;
+  const fragment = resolvePath(decodeURIComponent(location.hash.slice(1))).fragment;
+  if (fragment) document.getElementById(fragment)?.scrollIntoView(); else document.querySelector('main').scrollTo(0, 0);
+}
+function setStatus(message) { $('status').textContent = message; }
+$('choose').addEventListener('click', choose); $('reconnect').addEventListener('click', reconnect);
+$('roots').addEventListener('change', selectRoot);
+window.addEventListener('hashchange', () => { const path = decodeURIComponent(location.hash.slice(1)); if (path && path !== activePath) show(path); });
+(async () => {
+  if (!('showDirectoryPicker' in window)) { setStatus('This viewer needs Chrome or Edge.'); return; }
+  try {
+    roots = await savedRoots();
+    if (roots.length) await saveRoots();
+    root = roots.at(-1);
+    renderRoots();
+    if (!root) return;
+    if (await root.queryPermission({ mode: 'read' }) === 'granted') await connect();
+    else { setStatus(`The saved folder is ${root.name}. Select Reconnect to restore access.`); $('reconnect').hidden = false; }
+  } catch (error) { setStatus(`The saved folder could not be restored: ${error.message}`); }
+})();
+</script>
+</body>
+</html>
