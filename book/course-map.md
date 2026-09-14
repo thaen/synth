@@ -15,15 +15,15 @@ Lesson 1 supplies this two-module configuration. The oscillator produces a volta
 ## Each Lesson Adds One Physical Part.
 
 1. Lesson 1 adds the sine oscillator and its patch cable to the audio output.
-2. Lesson 2 adds the pitch-control module and its patch cable to the oscillator.
-3. Lesson 3 will add a musical pitch-control module that produces voltages for named notes.
-4. Lesson 4 will add a second oscillator and a mixer module.
-5. Lesson 5 will add a level-control module between the mixer and audio output.
-6. Lesson 6 will add an envelope generator and its control-voltage cable.
-7. Lesson 7 will add a filter module to the path that leads to the audio output.
-8. Lesson 8 will add a low-frequency oscillator and its patch cable.
-9. Lesson 9 will add a gate-control module and form one playable voice.
-10. Lesson 10 will add a sequencer module that creates timed pitch and gate voltages.
+2. Lesson 2 adds Gain between the oscillator and audio output.
+3. Lesson 3 adds a pitch-control module and its control cable to the oscillator.
+4. Lesson 4 will add waveform choices to the oscillator.
+5. Lesson 5 will add a low-pass filter between Gain and Audio Output.
+6. Lesson 6 will add a gate-control module and form one playable voice.
+7. Lesson 7 will add an attack-decay envelope for gain.
+8. Lesson 8 will add the sustain and release stages to that envelope.
+9. Lesson 9 will add a low-frequency oscillator and its control cable.
+10. Lesson 10 will add filter resonance.
 
 ## The Code Keeps the Physical Parts Separate.
 

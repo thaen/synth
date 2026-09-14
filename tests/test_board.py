@@ -12,16 +12,18 @@ from synth.pitch_control import PitchControl
 class BoardTests(unittest.TestCase):
     """These tests check cables, topology, pitch control, and reset behavior."""
 
-    def test_pitch_control_runs_before_the_oscillator_when_mounted_last(self) -> None:
-        """The cable direction determines order rather than the order of mounting."""
+    def test_pitch_control_converts_twelve_semitones_to_one_octave(self) -> None:
+        """The pitch control sends one volt and selects A5 after twelve semitone steps."""
         board, oscillator, _audio_output = mount_base_board()
-        pitch_control = PitchControl(pitch_volts=1.0)
+        pitch_control = PitchControl(semitones=12.0)
         board.mount(pitch_control)
         board.patch(pitch_control.pitch_output, oscillator.pitch_input)
 
         board.next_sample()
 
         self.assertEqual(board.evaluation_order()[0], pitch_control)
+        self.assertEqual(pitch_control.note_name, "A5")
+        self.assertEqual(pitch_control.pitch_output.voltage, 1.0)
         self.assertTrue(math.isclose(oscillator.frequency_hz, 880.0))
 
     def test_cable_can_connect_an_audio_output_to_a_pitch_input(self) -> None:

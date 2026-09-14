@@ -5,6 +5,7 @@ import unittest
 
 from lessons.lesson_01 import build as build_lesson_01
 from lessons.lesson_02 import build as build_lesson_02
+from lessons.lesson_03 import build as build_lesson_03
 from synth.realtime_audio import DeterministicAudioCollector, SoundDeviceAudioAdapter
 from synth.terminal import TerminalLessonApp, TerminalLessonState
 
@@ -245,6 +246,64 @@ class TerminalLessonStateTests(unittest.TestCase):
         self.assertTrue(
             any("Signal [####....]" in text for _row, _column, text in screen.calls)
         )
+
+    def test_lesson_three_adds_pitch_without_changing_the_gain_audio_path(self) -> None:
+        """Lesson 3 places pitch before the source and retains the Lesson 2 audio cables."""
+        lesson = build_lesson_03()
+        pitch, oscillator, gain, output = lesson.visible_panels
+
+        self.assertEqual(
+            [panel.label for panel in lesson.visible_panels],
+            ["Pitch", "Sine Wave Creator", "Gain", "Audio Output"],
+        )
+        self.assertTrue(oscillator.module.pitch_input.visible)
+        self.assertEqual(pitch.visible_controls[0].label, "Semitones")
+        self.assertEqual(pitch.visible_controls[0].step, 1.0)
+        self.assertEqual(len(lesson.board.cables), 3)
+        self.assertIs(lesson.board.cables[0].source.owner, oscillator.module)
+        self.assertIs(lesson.board.cables[0].destination.owner, gain.module)
+        self.assertIs(lesson.board.cables[1].source.owner, gain.module)
+        self.assertIs(lesson.board.cables[1].destination.owner, output.module)
+        self.assertIs(lesson.board.cables[2].source.owner, pitch.module)
+        self.assertIs(lesson.board.cables[2].destination.owner, oscillator.module)
+
+    def test_lesson_three_semitone_steps_change_note_frequency_and_keep_gain(self) -> None:
+        """A deterministic collector receives the selected frequency at Lesson 2's gain."""
+        lesson = build_lesson_03()
+        collector = DeterministicAudioCollector()
+        state = TerminalLessonState(lesson, collector)
+
+        for _ in range(3):
+            state.dispatch("up")
+        state.dispatch("b")
+        samples = collector.collect(4)
+
+        frequency_hz = 440.0 * 2 ** (3.0 / 12.0)
+        expected = [
+            0.50 * math.sin(2 * math.pi * index * frequency_hz / lesson.sample_rate)
+            for index in range(4)
+        ]
+        for sample, expected_sample in zip(samples, expected):
+            self.assertAlmostEqual(sample, expected_sample, places=12)
+        self.assertEqual(lesson.visible_panels[0].format_readout(), "C5  523.25 Hz")
+        self.assertEqual(lesson.visible_panels[1].format_readout(), "Pitch input  C5  523.25 Hz")
+        self.assertEqual(lesson.visible_panels[2].visible_controls[0].control.value, 0.50)
+
+    def test_lesson_three_reset_restores_a4_and_the_first_sample(self) -> None:
+        """Reset returns pitch to A4, stops audio, and resets oscillator phase."""
+        lesson = build_lesson_03()
+        collector = DeterministicAudioCollector()
+        state = TerminalLessonState(lesson, collector)
+        state.dispatch("up")
+        state.dispatch("b")
+        collector.collect(4)
+
+        state.dispatch("r")
+        state.dispatch("b")
+
+        self.assertTrue(collector.is_active)
+        self.assertEqual(lesson.visible_panels[0].format_readout(), "A4  440.00 Hz")
+        self.assertEqual(collector.collect(1), [0.0])
 
 
 class AudioAdapterTests(unittest.TestCase):
