@@ -14,7 +14,7 @@ phase → sine function → next normalized sample
 phase plus phase step → next phase
 ```
 
-The oscillator produces samples from `-1.0` through `1.0`. It does not set loudness. That separation matches the instrument model: an oscillator produces a signal, and a later amplifier module controls the signal's level.
+The oscillator produces samples from `-1.0` through `1.0`. It does not set loudness. The lesson program applies a fixed `MONITOR_LEVEL` of `0.25` only when it sends the samples to the output adapter, so playback starts at a restrained level. That fixed safety value is not yet an amplifier module. A later amplifier module will control the signal's level as part of the instrument.
 
 ## The Reusable Module Has a Small Interface.
 
