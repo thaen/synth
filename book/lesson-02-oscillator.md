@@ -93,6 +93,7 @@ Change `FREQUENCY_HZ` from `440.0` to `220.0`, then run the program again. The w
 Run this command from the project directory:
 
 ```sh
+python3 -m pip install --user -r requirements.txt
 python3 src/lesson_02_view.py
 ```
 
