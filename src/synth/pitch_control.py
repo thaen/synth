@@ -5,18 +5,42 @@ from synth.patch import OutputJack, VoltageRole
 
 
 class PitchControl:
-    """This module places one-volt-per-octave pitch voltage on its output jack."""
+    """This module converts semitone steps into one-volt-per-octave pitch voltage."""
 
     display_name = "PITCH CONTROL"
+    _NOTE_NAMES = ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
 
-    def __init__(self, pitch_volts: float = 0.0) -> None:
-        """Create a pitch control centered at zero volts, which represents A4."""
-        self.pitch_knob = Knob("Pitch", -2.0, 2.0, pitch_volts, "V")
+    def __init__(self, semitones: float = 0.0) -> None:
+        """Create a pitch control centered on A4 at zero semitones."""
+        self.pitch_knob = Knob("Semitones", -24.0, 24.0, semitones, "st")
         self.pitch_output = OutputJack("Pitch output", VoltageRole.CONTROL)
+
+    @property
+    def semitones(self) -> float:
+        """Return the number of equal-tempered steps from A4."""
+        return self.pitch_knob.value
+
+    @property
+    def pitch_volts(self) -> float:
+        """Return the control voltage for the current semitone setting."""
+        return self.semitones / 12.0
+
+    @property
+    def frequency_hz(self) -> float:
+        """Return the A4-relative frequency selected by the control."""
+        return 440.0 * 2 ** (self.semitones / 12.0)
+
+    @property
+    def note_name(self) -> str:
+        """Return the nearest equal-tempered note name for the current setting."""
+        midi_note = 69 + round(self.semitones)
+        name = self._NOTE_NAMES[midi_note % len(self._NOTE_NAMES)]
+        octave = midi_note // len(self._NOTE_NAMES) - 1
+        return f"{name}{octave}"
 
     def advance(self) -> None:
         """Place the knob's pitch voltage on the output jack."""
-        self.pitch_output.voltage = self.pitch_knob.value
+        self.pitch_output.voltage = self.pitch_volts
 
     def controls(self) -> list[Knob]:
         """Return the front-panel controls that the generic board view can draw."""
@@ -36,4 +60,4 @@ class PitchControl:
 
     def display_state(self) -> list[str]:
         """Return the state that belongs on the pitch-control panel."""
-        return ["1 V raises pitch by one octave"]
+        return [f"{self.note_name}  {self.frequency_hz:.2f} Hz"]
